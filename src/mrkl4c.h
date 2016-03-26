@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include <mrkcommon/array.h>
 #include <mrkcommon/bytes.h>
@@ -29,17 +30,23 @@ typedef struct _mrkl4c_minfo {
 } mrkl4c_minfo_t;
 
 
+#define MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS (O_WRONLY | O_APPEND | O_CREAT)
+#define MRKL4C_FWRITER_DEFAULT_OPEN_MODE 0644
 typedef struct _mrkl4c_writer {
     void (*write)(struct _mrkl4c_ctx *);
     union {
         struct {
             bytes_t *path;
+            bytes_t *shadow_path;
             size_t cursz;
             size_t maxsz;
             double maxtm;
             double starttm;
             double curtm;
             size_t maxfiles;
+            int fd;
+            struct stat sb;
+            unsigned flags;
         } file;
     } data;
 } mrkl4c_writer_t;
@@ -67,8 +74,8 @@ double mrkl4c_now_posix(void);
 #define MRKL4C_OPEN_STDOUT  0x0001
 #define MRKL4C_OPEN_STDERR  0x0002
 #define MRKL4C_OPEN_FILE    0x0003
-#define MRKL4C_OPEN_MASK    0x00ff
-#define MRKL4C_OPEN_SHARED  0x0100
+#define MRKL4C_OPEN_TY      0x00ff
+#define MRKL4C_OPEN_FLOCK   0x0100
 
 
 

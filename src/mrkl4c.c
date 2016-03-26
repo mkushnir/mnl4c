@@ -1,5 +1,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <limits.h> //PATH_MAX
+#include <unistd.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 
 #include <mrkcommon/array.h>
@@ -43,23 +47,166 @@ mrkl4c_write_stderr(mrkl4c_ctx_t *ctx)
 
 
 static void
-mrkl4c_write_file(mrkl4c_ctx_t *ctx)
-{
-    bytestream_rewind(&ctx->bs);
-}
-
-
-static void
 writer_init(mrkl4c_writer_t *writer)
 {
     writer->write = NULL;
     writer->data.file.path = NULL;
+    writer->data.file.shadow_path = NULL;
     writer->data.file.cursz = 0;
     writer->data.file.maxsz = 0;
     writer->data.file.maxtm = 0.0;
     writer->data.file.starttm = 0.0;
     writer->data.file.curtm = 0.0;
     writer->data.file.maxfiles = 0;
+    writer->data.file.fd = -1;
+    writer->data.file.flags = 0;
+}
+
+
+static int
+writer_file_new_shadow(mrkl4c_writer_t *writer)
+{
+    int oflags;
+    int fd;
+
+    writer->data.file.starttm = mrkl4c_now_posix();
+    writer->data.file.curtm = writer->data.file.starttm;
+    BYTES_DECREF(&writer->data.file.shadow_path);
+    writer->data.file.shadow_path =
+        bytes_printf("%s.%ld",
+                     writer->data.file.path->data,
+                     (unsigned long)writer->data.file.starttm);
+
+    oflags = MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS;
+    if (writer->data.file.flags & MRKL4C_OPEN_FLOCK) {
+        oflags |= O_EXLOCK;
+    }
+    if ((fd = open((char *)writer->data.file.shadow_path->data,
+                     oflags,
+                     MRKL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
+        TRRET(WRITER_FILE_NEW_SHADOW + 1);
+    }
+    (void)close(fd);
+    /* write symlink */
+    if (symlink((char *)writer->data.file.shadow_path->data,
+                (char *)writer->data.file.path->data) != 0) {
+        TRRET(WRITER_FILE_NEW_SHADOW + 2);
+    }
+    if (lstat((char *)writer->data.file.path->data,
+              &writer->data.file.sb) != 0) {
+        TRRET(WRITER_FILE_NEW_SHADOW + 3);
+    }
+    writer->data.file.cursz = writer->data.file.sb.st_size;
+    writer->data.file.starttm = writer->data.file.sb.st_birthtim.tv_sec;
+    return 0;
+}
+
+
+static int _writer_file_open(mrkl4c_writer_t *writer)
+{
+    int oflags;
+
+    oflags = MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS;
+    if (writer->data.file.flags & MRKL4C_OPEN_FLOCK) {
+        oflags |= O_EXLOCK;
+    }
+    if ((writer->data.file.fd =
+                open((char *)writer->data.file.path->data,
+                     oflags,
+                     MRKL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
+        TRRET(_WRITER_FILE_OPEN + 1);
+    }
+    return 0;
+}
+
+static int
+writer_file_check_rollover(mrkl4c_writer_t *writer)
+{
+    int res;
+
+    res = 0;
+    if (((writer->data.file.curtm - writer->data.file.starttm) >
+        writer->data.file.maxtm) ||
+        writer->data.file.cursz > writer->data.file.maxsz) {
+        if (writer->data.file.fd >= 0) {
+            close(writer->data.file.fd);
+            writer->data.file.fd = -1;
+        }
+    }
+
+    if (writer->data.file.fd < 0) {
+        res = _writer_file_open(writer);
+    }
+
+    return res;
+}
+
+
+static int
+writer_file_open(mrkl4c_writer_t *writer)
+{
+    /*
+     * not writer->data.file.path exists ?
+     *  new shadow
+     * not writer->data.file.path a symlink ?
+     *  unlink and new shadow :
+     *  read link
+     * finally:
+     *  rollover
+     */
+    if (lstat((char *)writer->data.file.path->data,
+              &writer->data.file.sb) != 0) {
+        if (writer_file_new_shadow(writer) != 0) {
+            TRRET(WRITER_FILE_OPEN + 1);
+        }
+    }
+    if (!S_ISLNK(writer->data.file.sb.st_mode)) {
+        if (unlink((char *)writer->data.file.path->data) != 0) {
+            TRRET(WRITER_FILE_OPEN + 2);
+        }
+        if (writer_file_new_shadow(writer) != 0) {
+            TRRET(WRITER_FILE_OPEN + 3);
+        }
+    } else {
+        char buf[PATH_MAX];
+        ssize_t nread;
+
+        /* read symlink */
+        if ((nread = readlink((char *)writer->data.file.path->data,
+                             buf,
+                             sizeof(buf))) < 0) {
+            TRRET(WRITER_FILE_OPEN + 4);
+        }
+        buf[nread] = '\0';
+        BYTES_DECREF(&writer->data.file.shadow_path);
+        writer->data.file.shadow_path = bytes_new_from_str(buf);
+        writer->data.file.cursz = writer->data.file.sb.st_size;
+        writer->data.file.starttm = writer->data.file.sb.st_birthtim.tv_sec;
+    }
+    /*
+     * At this point, shadow_path, path, and sb are consistent.
+     */
+    return writer_file_check_rollover(writer);
+}
+
+
+static void
+mrkl4c_write_file(mrkl4c_ctx_t *ctx)
+{
+    //TRACE("cursz=%ld starttm=%lf curtm=%lf",
+    //      ctx->writer.data.file.cursz,
+    //      ctx->writer.data.file.starttm,
+    //      ctx->writer.data.file.curtm);
+    if (writer_file_check_rollover(&ctx->writer) != 0) {
+        TRACE("failed to roll over");
+    }
+    assert(ctx->writer.data.file.fd >= 0);
+    if (write(ctx->writer.data.file.fd,
+              SDATA(&ctx->bs, 0),
+              SEOD(&ctx->bs)) <= 0) {
+        TRACE("write failed");
+    }
+    bytestream_rewind(&ctx->bs);
 }
 
 
@@ -74,6 +221,7 @@ static void
 writer_fini(mrkl4c_writer_t *writer)
 {
     BYTES_DECREF(&writer->data.file.path);
+    BYTES_DECREF(&writer->data.file.shadow_path);
 }
 
 
@@ -168,8 +316,15 @@ mrkl4c_open(unsigned ty, ...)
     array_iter_t it;
 
     fpath = NULL;
+
+    if ((ty & MRKL4C_OPEN_FLOCK) &&
+        ((ty & MRKL4C_OPEN_TY) != MRKL4C_OPEN_FILE)) {
+        TRACE("non-file flock is not supported");
+        return -1;
+    }
+
     va_start(ap, ty);
-    switch (ty & MRKL4C_OPEN_MASK) {
+    switch (ty & MRKL4C_OPEN_TY) {
     case MRKL4C_OPEN_STDOUT:
     case MRKL4C_OPEN_STDERR:
         break;
@@ -188,31 +343,27 @@ mrkl4c_open(unsigned ty, ...)
     }
     va_end(ap);
 
-    if (ty & MRKL4C_OPEN_SHARED) {
-        for (pctx = array_first(&ctxes, &it);
-             pctx != NULL;
-             pctx = array_next(&ctxes, &it)) {
-            if (*pctx != NULL) {
-                if ((*pctx)->ty == ty) {
-                    if (fpath != NULL) {
-                        if (strcmp(fpath,
-                                   (char *)(*pctx)->
-                                    writer.data.file.path->data) == 0) {
-                            break;
-                        } else {
-                            /* continue */
-                        }
-                    } else {
-                        /* assume STDOUT/STDERR */
+    for (pctx = array_first(&ctxes, &it);
+         pctx != NULL;
+         pctx = array_next(&ctxes, &it)) {
+        if (*pctx != NULL) {
+            if ((*pctx)->ty == ty) {
+                if (fpath != NULL) {
+                    if (strcmp(fpath,
+                               (char *)(*pctx)->
+                                writer.data.file.path->data) == 0) {
                         break;
+                    } else {
+                        /* continue */
                     }
                 } else {
-                    /* move on */
+                    /* assume STDOUT/STDERR */
+                    break;
                 }
+            } else {
+                /* move on */
             }
         }
-    } else {
-        pctx = NULL;
     }
 
     if (pctx == NULL) {
@@ -231,10 +382,10 @@ mrkl4c_open(unsigned ty, ...)
             if ((pctx = array_incr_iter(&ctxes, &it)) == NULL) {
                 FAIL("array_incr_iter");
             }
-            (*pctx)->ty = ty & MRKL4C_OPEN_MASK;
+            (*pctx)->ty = ty & MRKL4C_OPEN_TY;
         }
 
-        switch (ty & MRKL4C_OPEN_MASK) {
+        switch (ty & MRKL4C_OPEN_TY) {
         case MRKL4C_OPEN_STDOUT:
             (*pctx)->writer.write = mrkl4c_write_stdout;
             break;
@@ -253,6 +404,10 @@ mrkl4c_open(unsigned ty, ...)
             (*pctx)->writer.data.file.curtm =
                 (*pctx)->writer.data.file.starttm;
             (*pctx)->writer.data.file.maxfiles = maxfiles;
+            (*pctx)->writer.data.file.flags = flags;
+            if (writer_file_open(&(*pctx)->writer) != 0) {
+                goto err;
+            }
             break;
 
         default:
@@ -263,6 +418,10 @@ mrkl4c_open(unsigned ty, ...)
 
     ++(*pctx)->nref;
     return (mrkl4c_logger_t)it.iter;
+
+err:
+    (void)mrkl4c_close((mrkl4c_logger_t)it.iter);
+    return -1;
 }
 
 
