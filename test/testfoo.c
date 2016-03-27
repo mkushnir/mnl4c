@@ -61,7 +61,9 @@ test0(void)
     mrkl4c_init();
 
     logger0 = mrkl4c_open(MRKL4C_OPEN_STDERR);
-    logger1 = mrkl4c_open(MRKL4C_OPEN_FILE, "foo.log");
+    assert(logger0 != -1);
+    logger1 = mrkl4c_open(MRKL4C_OPEN_FILE, "/data2/mkushnir/development/mrkl4c/foo.log", 4096, 20.0, 10, 0);
+    assert(logger1 != -1);
 
     FOO_LREG(logger0, QWE, LOG_INFO);
     FOO_LREG(logger0, ASD, LOG_ERR);

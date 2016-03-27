@@ -1,6 +1,8 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <fnmatch.h>
+#include <libgen.h> //basename
 #include <limits.h> //PATH_MAX
 #include <unistd.h>
 #include <sys/stat.h>
@@ -9,6 +11,7 @@
 #include <mrkcommon/array.h>
 #include <mrkcommon/bytestream.h>
 #include <mrkcommon/dumpm.h>
+#include <mrkcommon/traversedir.h>
 #include <mrkcommon/util.h>
 
 #define SYSLOG_NAMES
@@ -64,13 +67,130 @@ writer_init(mrkl4c_writer_t *writer)
 
 
 static int
+_writer_file_cleanup_shadows_cb(const char *path,
+                                struct dirent *de,
+                                void *udata)
+{
+    struct {
+        char pat[PATH_MAX];
+        array_t files;
+    } *params = udata;
+
+    if (de != NULL) {
+        char *probe;
+
+        if ((probe = path_join(path, de->d_name)) == NULL) {
+            return 1;
+        }
+        if (fnmatch(params->pat, probe, FNM_PATHNAME | FNM_PERIOD) == 0) {
+            char **p;
+
+            if ((p = array_incr(&params->files)) == NULL) {
+                FAIL("array_incr");
+            }
+            //TRACE("found: %s against %s", probe, params->pat);
+            *p = probe;
+        } else {
+            //TRACE("not found: %s against %s", probe, pat);
+            free(probe);
+        }
+
+    }
+    return 0;
+}
+
+
+static int
+_writer_file_cleanup_shadows_fini_item(char **s)
+{
+    if (*s != NULL) {
+        //TRACE("freeing %s", *s);
+        free(*s);
+        *s = NULL;
+    }
+    return 0;
+}
+
+
+static int
+_writer_file_cleanup_shadows_cmp(char **a, char **b)
+{
+    if (*a == NULL) {
+        if (*b == NULL) {
+            return 0;
+        } else {
+            return -1;
+        }
+    } else {
+        if (*b == NULL) {
+            return 1;
+        } else {
+            return strcmp(*a, *b);
+        }
+    }
+    return 0;
+}
+
+static void
+writer_file_cleanup_shadows(mrkl4c_writer_t *writer)
+{
+    bytes_t *tmp;
+    struct {
+        char pat[PATH_MAX];
+        array_t files;
+    } params;
+    char **fname;
+    array_iter_t it;
+
+    if (writer->data.file.maxfiles <= 0) {
+        return;
+    }
+
+    tmp = bytes_new_from_bytes(writer->data.file.path);
+    snprintf(params.pat, sizeof(params.pat), "%s.[0-9][0-9]*", tmp->data);
+    array_init(&params.files,
+               sizeof(char *),
+               0,
+               NULL,
+               (array_finalizer_t)_writer_file_cleanup_shadows_fini_item);
+    if (traverse_dir(dirname((const char *)tmp->data),
+                     _writer_file_cleanup_shadows_cb,
+                     &params) != 0) {
+        TRACE("traverse_dir() failed, could not cleanup shadows");
+    }
+
+    if (params.files.elnum > writer->data.file.maxfiles) {
+        array_sort(&params.files,
+                   (array_compar_t)_writer_file_cleanup_shadows_cmp);
+
+        for (fname = array_first(&params.files, &it);
+             fname != NULL;
+             fname = array_next(&params.files, &it)) {
+            if (it.iter < params.files.elnum - writer->data.file.maxfiles) {
+                //TRACE("unlink: %s", *fname);
+                if (unlink(*fname) != 0) {
+                    TRACE("Failed to unlink %s while cleaninng up shadwos",
+                          *fname);
+                }
+            } else {
+                //TRACE("keep: %s", *fname);
+            }
+        }
+    }
+
+    array_fini(&params.files);
+    BYTES_DECREF(&tmp);
+}
+
+
+static int
 writer_file_new_shadow(mrkl4c_writer_t *writer)
 {
     int oflags;
     int fd;
 
     writer->data.file.starttm = mrkl4c_now_posix();
-    writer->data.file.curtm = writer->data.file.starttm;
+    //writer->data.file.curtm = writer->data.file.starttm;
     BYTES_DECREF(&writer->data.file.shadow_path);
     writer->data.file.shadow_path =
         bytes_printf("%s.%ld",
@@ -92,12 +212,15 @@ writer_file_new_shadow(mrkl4c_writer_t *writer)
                 (char *)writer->data.file.path->data) != 0) {
         TRRET(WRITER_FILE_NEW_SHADOW + 2);
     }
-    if (lstat((char *)writer->data.file.path->data,
+    if (lstat((char *)writer->data.file.shadow_path->data,
               &writer->data.file.sb) != 0) {
         TRRET(WRITER_FILE_NEW_SHADOW + 3);
     }
     writer->data.file.cursz = writer->data.file.sb.st_size;
     writer->data.file.starttm = writer->data.file.sb.st_birthtim.tv_sec;
+
+    writer_file_cleanup_shadows(writer);
+
     return 0;
 }
 
@@ -125,12 +248,27 @@ writer_file_check_rollover(mrkl4c_writer_t *writer)
     int res;
 
     res = 0;
-    if (((writer->data.file.curtm - writer->data.file.starttm) >
+    //TRACE("curtm=%lf starttm=%lf maxtm=%lf, cursz=%ld maxsz=%ld",
+    //      writer->data.file.curtm,
+    //      writer->data.file.starttm,
+    //      writer->data.file.maxtm,
+    //      writer->data.file.cursz,
+    //      writer->data.file.maxsz);
+    if (((writer->data.file.maxtm > 0.0) &&
+         (writer->data.file.curtm - writer->data.file.starttm) >
         writer->data.file.maxtm) ||
-        writer->data.file.cursz > writer->data.file.maxsz) {
+        ((writer->data.file.maxsz > 0) &&
+         (writer->data.file.cursz > writer->data.file.maxsz))) {
         if (writer->data.file.fd >= 0) {
             close(writer->data.file.fd);
             writer->data.file.fd = -1;
+            if (unlink((char *)writer->data.file.path->data) != 0) {
+                TRRET(WRITER_FILE_OPEN + 2);
+            }
+            BYTES_DECREF(&writer->data.file.shadow_path);
+            if (writer_file_new_shadow(writer) != 0) {
+                TRRET(WRITER_FILE_OPEN + 3);
+            }
         }
     }
 
@@ -145,6 +283,7 @@ writer_file_check_rollover(mrkl4c_writer_t *writer)
 static int
 writer_file_open(mrkl4c_writer_t *writer)
 {
+    struct stat sb;
     /*
      * not writer->data.file.path exists ?
      *  new shadow
@@ -154,13 +293,12 @@ writer_file_open(mrkl4c_writer_t *writer)
      * finally:
      *  rollover
      */
-    if (lstat((char *)writer->data.file.path->data,
-              &writer->data.file.sb) != 0) {
+    if (lstat((char *)writer->data.file.path->data, &sb) != 0) {
         if (writer_file_new_shadow(writer) != 0) {
             TRRET(WRITER_FILE_OPEN + 1);
         }
     }
-    if (!S_ISLNK(writer->data.file.sb.st_mode)) {
+    if (!S_ISLNK(sb.st_mode)) {
         if (unlink((char *)writer->data.file.path->data) != 0) {
             TRRET(WRITER_FILE_OPEN + 2);
         }
@@ -180,6 +318,12 @@ writer_file_open(mrkl4c_writer_t *writer)
         buf[nread] = '\0';
         BYTES_DECREF(&writer->data.file.shadow_path);
         writer->data.file.shadow_path = bytes_new_from_str(buf);
+        if (lstat((char *)writer->data.file.shadow_path->data,
+            &writer->data.file.sb) != 0) {
+            if (writer_file_new_shadow(writer) != 0) {
+                TRRET(WRITER_FILE_OPEN + 5);
+            }
+        }
         writer->data.file.cursz = writer->data.file.sb.st_size;
         writer->data.file.starttm = writer->data.file.sb.st_birthtim.tv_sec;
     }
@@ -250,6 +394,7 @@ mrkl4c_ctx_destroy(mrkl4c_ctx_t **pctx)
     if (*pctx != NULL) {
         bytestream_fini(&(*pctx)->bs);
         writer_fini(&(*pctx)->writer);
+        array_fini(&(*pctx)->minfos);
         free(*pctx);
         *pctx = NULL;
     }
@@ -311,7 +456,7 @@ mrkl4c_open(unsigned ty, ...)
     size_t maxsz;
     double maxtm;
     size_t maxfiles;
-    UNUSED int flags;
+    int flags;
     mrkl4c_ctx_t **pctx;
     array_iter_t it;
 
@@ -397,6 +542,10 @@ mrkl4c_open(unsigned ty, ...)
         case MRKL4C_OPEN_FILE:
             assert(fpath != NULL);
             (*pctx)->writer.write = mrkl4c_write_file;
+            if (*fpath != '/') {
+                TRACE("fpath is not an absolute path: %s", fpath);
+                goto err;
+            }
             (*pctx)->writer.data.file.path = bytes_new_from_str(fpath);
             (*pctx)->writer.data.file.maxsz = maxsz;
             (*pctx)->writer.data.file.maxtm = maxtm;
