@@ -5,6 +5,7 @@
 #include <libgen.h> //basename
 #include <limits.h> //PATH_MAX
 #include <unistd.h>
+#include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 
@@ -153,7 +154,7 @@ writer_file_cleanup_shadows(mrkl4c_writer_t *writer)
                0,
                NULL,
                (array_finalizer_t)_writer_file_cleanup_shadows_fini_item);
-    if (traverse_dir(dirname((const char *)tmp->data),
+    if (traverse_dir(dirname((char *)tmp->data),
                      _writer_file_cleanup_shadows_cb,
                      &params) != 0) {
         TRACE("traverse_dir() failed, could not cleanup shadows");
@@ -198,26 +199,32 @@ writer_file_new_shadow(mrkl4c_writer_t *writer)
                      (unsigned long)writer->data.file.starttm);
 
     oflags = MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS;
-    if (writer->data.file.flags & MRKL4C_OPEN_FLOCK) {
-        oflags |= O_EXLOCK;
-    }
     if ((fd = open((char *)writer->data.file.shadow_path->data,
                      oflags,
                      MRKL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
         TRRET(WRITER_FILE_NEW_SHADOW + 1);
     }
+    if (writer->data.file.flags & MRKL4C_OPEN_FLOCK) {
+        if (flock(fd, LOCK_EX|LOCK_NB) == -1) {
+            TR(WRITER_FILE_NEW_SHADOW + 2);
+        }
+    }
     (void)close(fd);
     /* write symlink */
     if (symlink((char *)writer->data.file.shadow_path->data,
                 (char *)writer->data.file.path->data) != 0) {
-        TRRET(WRITER_FILE_NEW_SHADOW + 2);
+        TRRET(WRITER_FILE_NEW_SHADOW + 3);
     }
     if (lstat((char *)writer->data.file.shadow_path->data,
               &writer->data.file.sb) != 0) {
-        TRRET(WRITER_FILE_NEW_SHADOW + 3);
+        TRRET(WRITER_FILE_NEW_SHADOW + 4);
     }
     writer->data.file.cursz = writer->data.file.sb.st_size;
+#ifdef HAVE_ST_BIRTHTIM
     writer->data.file.starttm = writer->data.file.sb.st_birthtim.tv_sec;
+#else
+    writer->data.file.starttm = writer->data.file.sb.st_ctime;
+#endif
 
     writer_file_cleanup_shadows(writer);
 
@@ -230,14 +237,18 @@ static int _writer_file_open(mrkl4c_writer_t *writer)
     int oflags;
 
     oflags = MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS;
-    if (writer->data.file.flags & MRKL4C_OPEN_FLOCK) {
-        oflags |= O_EXLOCK;
-    }
     if ((writer->data.file.fd =
                 open((char *)writer->data.file.path->data,
                      oflags,
                      MRKL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
         TRRET(_WRITER_FILE_OPEN + 1);
+    }
+    if (writer->data.file.flags & MRKL4C_OPEN_FLOCK) {
+        if (flock(writer->data.file.fd, LOCK_EX|LOCK_NB) == -1) {
+            close(writer->data.file.fd);
+            writer->data.file.fd = -1;
+            TRRET(_WRITER_FILE_OPEN + 2);
+        }
     }
     return 0;
 }
@@ -325,7 +336,11 @@ writer_file_open(mrkl4c_writer_t *writer)
             }
         }
         writer->data.file.cursz = writer->data.file.sb.st_size;
+#ifdef HAVE_ST_BIRTHTIM
         writer->data.file.starttm = writer->data.file.sb.st_birthtim.tv_sec;
+#else
+    writer->data.file.starttm = writer->data.file.sb.st_ctime;
+#endif
     }
     /*
      * At this point, shadow_path, path, and sb are consistent.
@@ -344,7 +359,7 @@ mrkl4c_write_file(mrkl4c_ctx_t *ctx)
     if (writer_file_check_rollover(&ctx->writer) != 0) {
         TRACE("failed to roll over");
     }
-    assert(ctx->writer.data.file.fd >= 0);
+    //assert(ctx->writer.data.file.fd >= 0);
     if (write(ctx->writer.data.file.fd,
               SDATA(&ctx->bs, 0),
               SEOD(&ctx->bs)) <= 0) {

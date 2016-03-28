@@ -73,6 +73,9 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 
+AC_CHECK_MEMBER([struct stat.st_birthtim],
+                AC_DEFINE([HAVE_ST_BIRTHTIM], [1], [Define if stat.st_birthtim exists]))
+
 
 AC_PRESERVE_HELP_ORDER
 
