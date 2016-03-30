@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 
+#define MRKL4C_LOGGER_INVALID (-1)
 typedef int mrkl4c_logger_t;
 
 struct _mrkl4c_ctx;
@@ -89,7 +90,7 @@ void mrkl4c_register_msg(mrkl4c_logger_t, int, int);
 void mrkl4c_init(void);
 void mrkl4c_fini(void);
 
-static const char *level_names[] = {
+UNUSED static const char *level_names[] = {
     "EMERG",
     "ALERT",
     "CRIT",
@@ -106,28 +107,29 @@ static const char *level_names[] = {
 
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE(ld, level, mod, msg, ...)                 \
     do {                                                                       \
-        mrkl4c_ctx_t *ctx;                                                     \
-        ssize_t nwritten;                                                      \
-        ctx = mrkl4c_get_ctx(ld);                                              \
-        assert(ctx != NULL);                                                   \
-        if (mrkl4c_ctx_allowed(ctx, level, mod ## _ ## msg ## _ID)) {          \
-            assert((ctx)->writer.write != NULL);                               \
-            (ctx)->writer.data.file.curtm = mrkl4c_now_posix();                \
-            nwritten = bytestream_nprintf(&(ctx)->bs,                          \
-                                          (ctx)->bsbufsz,                      \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        ssize_t _mrkl4c_nwritten;                                              \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            assert((_mrkl4c_ctx)->writer.write != NULL);                       \
+            (_mrkl4c_ctx)->writer.data.file.curtm = mrkl4c_now_posix();        \
+            _mrkl4c_nwritten = bytestream_nprintf(&(_mrkl4c_ctx)->bs,          \
+                                          (_mrkl4c_ctx)->bsbufsz,              \
                                           "%.06lf [%d] %s %s: "                \
                                           mod ## _ ## msg ## _FMT,             \
-                                          (ctx)->writer.data.file.curtm,       \
-                                          ctx->cache.pid,                      \
+                                          (_mrkl4c_ctx)->                      \
+                                            writer.data.file.curtm,            \
+                                          _mrkl4c_ctx->cache.pid,              \
                                           mod ## _NAME,                        \
                                           level_names[level],                  \
                                           __VA_ARGS__);                        \
-            if (nwritten < 0) {                                                \
-                bytestream_rewind(&(ctx)->bs);                                 \
+            if (_mrkl4c_nwritten < 0) {                                        \
+                bytestream_rewind(&(_mrkl4c_ctx)->bs);                         \
             } else {                                                           \
-                (void)bytestream_cat(&(ctx)->bs, 2, "\n");                     \
-                (ctx)->writer.write(ctx);                                      \
-                (ctx)->writer.data.file.cursz += nwritten + 1;                 \
+                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 2, "\n");             \
+                (_mrkl4c_ctx)->writer.write(_mrkl4c_ctx);                      \
+                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten + 1; \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -135,40 +137,41 @@ static const char *level_names[] = {
 
 #define MRKL4C_WRITE_START_PRINTFLIKE(ld, level, mod, msg, ...)                \
     do {                                                                       \
-        mrkl4c_ctx_t *ctx;                                                     \
-        ssize_t nwritten;                                                      \
-        ctx = mrkl4c_get_ctx(ld);                                              \
-        assert(ctx != NULL);                                                   \
-        if (mrkl4c_ctx_allowed(ctx, level, mod ## _ ## msg ## _ID)) {          \
-            (ctx)->writer.data.file.curtm = mrkl4c_now_posix();                \
-            nwritten = bytestream_nprintf(&(ctx)->bs,                          \
-                                          (ctx)->bsbufsz,                      \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        ssize_t _mrkl4c_nwritten;                                              \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            (_mrkl4c_ctx)->writer.data.file.curtm = mrkl4c_now_posix();        \
+            _mrkl4c_nwritten = bytestream_nprintf(&(_mrkl4c_ctx)->bs,          \
+                                          (_mrkl4c_ctx)->bsbufsz,              \
                                           "%.06lf [%d] %s %s: "                \
                                           mod ## _ ## msg ## _FMT,             \
-                                          (ctx)->writer.data.file.curtm,       \
-                                          ctx->cache.pid,                      \
+                                          (_mrkl4c_ctx)->                      \
+                                            writer.data.file.curtm,            \
+                                          _mrkl4c_ctx->cache.pid,              \
                                           mod ## _NAME,                        \
                                           level_names[level],                  \
                                           __VA_ARGS__)                         \
 
 
 #define MRKL4C_WRITE_NEXT_PRINTFLIKE(ld, level, mod, msg, fmt, ...)    \
-            nwritten = bytestream_nprintf(&(ctx)->bs,                  \
-                                     (ctx)->bsbufsz,                   \
+            _mrkl4c_nwritten = bytestream_nprintf(&(_mrkl4c_ctx)->bs,  \
+                                     (_mrkl4c_ctx)->bsbufsz,           \
                                      fmt,                              \
                                      __VA_ARGS__)                      \
 
 
-#define MRKL4C_WRITE_STOP_PRINTFLIKE(ld, level, mod, msg)      \
-            if (nwritten < 0) {                                \
-                bytestream_rewind(&(ctx)->bs);                 \
-            } else {                                           \
-                (void)bytestream_cat(&(ctx)->bs, 2, "\n");     \
-                (ctx)->writer.write(ctx);                      \
-                (ctx)->writer.data.file.cursz += nwritten + 1; \
-            }                                                  \
-        }                                                      \
-    } while (0)                                                \
+#define MRKL4C_WRITE_STOP_PRINTFLIKE(ld, level, mod, msg)                      \
+            if (_mrkl4c_nwritten < 0) {                                        \
+                bytestream_rewind(&(_mrkl4c_ctx)->bs);                         \
+            } else {                                                           \
+                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 2, "\n");             \
+                (_mrkl4c_ctx)->writer.write(_mrkl4c_ctx);                      \
+                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten + 1; \
+            }                                                                  \
+        }                                                                      \
+    } while (0)                                                                \
 
 
 
