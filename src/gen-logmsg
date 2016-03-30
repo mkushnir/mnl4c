@@ -1,0 +1,57 @@
+#!/bin/sh
+
+:>logmsg.h
+:>logmsg.c
+
+echo '#include "logmsg.h"' >>logmsg.c
+echo '#include <mrkl4c.h>' >>logmsg.c
+echo
+echo 'void' >>logmsg.c
+echo 'init_logmsg(mrkl4c_logger_t logger)' >>logmsg.c
+echo '{' >>logmsg.c
+
+
+write_macros() {
+    local _n _m
+    _n=$1
+    _m=$2
+    cat >>logmsg.h <<EOD
+
+#define ${_n}_LOG(logger, level, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE(logger, level, ${_n}, msg, __VA_ARGS__)
+#define ${_n}_LOG_START(logger, level, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE(logger, level, ${_n}, msg, __VA_ARGS__)
+#define ${_n}_LOG_NEXT(logger, level, msg, fmt, ...) MRKL4C_WRITE_NEXT_PRINTFLIKE(logger, level, ${_n}, msg, fmt, __VA_ARGS__)
+#define ${_n}_LOG_STOP(logger, level, msg) MRKL4C_WRITE_STOP_PRINTFLIKE(logger, level, ${_n}, msg)
+#define ${_n}_LERROR(logger, msg, ...) ${_n}_LOG(logger, LOG_ERR, msg, __VA_ARGS__)
+#define ${_n}_LWARNING(logger, msg, ...) ${_n}_LOG(logger, LOG_WARNING, msg, __VA_ARGS__)
+#define ${_n}_LINFO(logger, msg, ...) ${_n}_LOG(logger, LOG_INFO, msg, __VA_ARGS__)
+#define ${_n}_LDEBUG(logger, msg, ...) ${_n}_LOG(logger, LOG_DEBUG, msg, __VA_ARGS__)
+#define ${_n}_LREG(logger, msg, level) mrkl4c_register_msg(logger, ${_n}_ ## msg ## _ID, level)
+#define ${_n}_NAME ${_m}
+#define ${_n}_PREFIX _MRKL4C_TSPIDMOD_FMT
+#define ${_n}_ARGS _MRKL4C_TSPIDMOD_ARGS(${_n})
+EOD
+}
+
+
+
+
+n=0
+mid=
+while read a b c
+do
+    if test -z "$c"
+    then
+        if test -z "$a" -o -z "$b"
+        then
+            continue
+        fi
+        mid=$a
+        write_macros $a "$b"
+    else
+        echo "#define ${mid}_${a}_ID $n" >>logmsg.h
+        echo "#define ${mid}_${a}_FMT $c" >>logmsg.h
+        echo "    ${mid}_LREG(logger, $a, $b);" >>logmsg.c
+        n=$(( $n + 1 ))
+    fi
+done
+echo '}' >>logmsg.c
