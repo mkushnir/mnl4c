@@ -16,7 +16,6 @@ write_macros() {
     _n=$1
     _m=$2
     cat >>logmsg.h <<EOD
-
 #define ${_n}_LOG(logger, level, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE(logger, level, ${_n}, msg, __VA_ARGS__)
 #define ${_n}_LOG_START(logger, level, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE(logger, level, ${_n}, msg, __VA_ARGS__)
 #define ${_n}_LOG_NEXT(logger, level, msg, fmt, ...) MRKL4C_WRITE_NEXT_PRINTFLIKE(logger, level, ${_n}, msg, fmt, __VA_ARGS__)
