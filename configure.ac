@@ -36,13 +36,16 @@ fi
 
 AC_SUBST(CC_DEBUG, ['-ftrapv'])
 
-uname_s=`uname -s`
-if test "$uname_s" = "Linux"
-then
-    AC_SUBST(_GNU_SOURCE_MACRO, ['-D_GNU_SOURCE'])
-else
-    AC_SUBST(_GNU_SOURCE_MACRO, [''])
-fi
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
+case "$target_os" in
+    *linux*)
+        AC_SUBST(_GNU_SOURCE_MACRO, ['-D_GNU_SOURCE'])
+    ;;
+    *)
+        AC_SUBST(_GNU_SOURCE_MACRO)
+    ;;
+esac
 
 AC_CONFIG_MACRO_DIR([m4])
 
