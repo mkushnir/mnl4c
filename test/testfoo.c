@@ -11,7 +11,7 @@ const char *_malloc_options = "AJ";
 #endif
 
 #define FOO_LOG(logger, level, msg, ...) \
-    MRKL4C_WRITE_ONCE_PRINTFLIKE(logger, level, FOO, msg, __VA_ARGS__)
+    MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, FOO, msg, __VA_ARGS__)
 
 #define FOO_LOG_START(logger, level, msg, ...) \
     MRKL4C_WRITE_START_PRINTFLIKE(logger, level, FOO, msg, __VA_ARGS__)

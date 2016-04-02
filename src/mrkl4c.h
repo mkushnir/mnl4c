@@ -135,6 +135,44 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+#define MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(ld, level, mod, msg, ...)              \
+    do {                                                                       \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        ssize_t _mrkl4c_nwritten;                                              \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            struct tm *_mrkl4c_tm;                                             \
+            time_t _mtkl4c_now;                                                \
+            char _mrkl4c_now_str[32];                                          \
+            assert((_mrkl4c_ctx)->writer.write != NULL);                       \
+            (_mrkl4c_ctx)->writer.data.file.curtm = mrkl4c_now_posix();        \
+            _mtkl4c_now = (time_t)(_mrkl4c_ctx)->writer.data.file.curtm;       \
+            _mrkl4c_tm = localtime(&_mtkl4c_now);                              \
+            (void)strftime(_mrkl4c_now_str,                                    \
+                           sizeof(_mrkl4c_now_str),                            \
+                           "%Y-%m-%d %H:%M:%S",                                \
+                           _mrkl4c_tm);                                        \
+            _mrkl4c_nwritten = bytestream_nprintf(&(_mrkl4c_ctx)->bs,          \
+                                          (_mrkl4c_ctx)->bsbufsz,              \
+                                          "%s [%d] %s %s: "                    \
+                                          mod ## _ ## msg ## _FMT,             \
+                                          _mrkl4c_now_str,                     \
+                                          _mrkl4c_ctx->cache.pid,              \
+                                          mod ## _NAME,                        \
+                                          level_names[level],                  \
+                                          __VA_ARGS__);                        \
+            if (_mrkl4c_nwritten < 0) {                                        \
+                bytestream_rewind(&(_mrkl4c_ctx)->bs);                         \
+            } else {                                                           \
+                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 2, "\n");             \
+                (_mrkl4c_ctx)->writer.write(_mrkl4c_ctx);                      \
+                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten + 1; \
+            }                                                                  \
+        }                                                                      \
+    } while (0)                                                                \
+
+
 #define MRKL4C_WRITE_START_PRINTFLIKE(ld, level, mod, msg, ...)                \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -149,6 +187,34 @@ UNUSED static const char *level_names[] = {
                                           mod ## _ ## msg ## _FMT,             \
                                           (_mrkl4c_ctx)->                      \
                                             writer.data.file.curtm,            \
+                                          _mrkl4c_ctx->cache.pid,              \
+                                          mod ## _NAME,                        \
+                                          level_names[level],                  \
+                                          __VA_ARGS__)                         \
+
+
+#define MRKL4C_WRITE_START_PRINTFLIKE_TM(ld, level, mod, msg, ...)             \
+    do {                                                                       \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        ssize_t _mrkl4c_nwritten;                                              \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            struct tm *_mrkl4c_tm;                                             \
+            time_t _mtkl4c_now;                                                \
+            char _mrkl4c_now_str[32];                                          \
+            (_mrkl4c_ctx)->writer.data.file.curtm = mrkl4c_now_posix();        \
+            _mtkl4c_now = (time_t)(_mrkl4c_ctx)->writer.data.file.curtm;       \
+            _mrkl4c_tm = localtime(&_mtkl4c_now);                              \
+            (void)strftime(_mrkl4c_now_str,                                    \
+                           sizeof(_mrkl4c_now_str),                            \
+                           "%Y-%m-%d %H:%M:%S",                                \
+                           _mrkl4c_tm);                                        \
+            _mrkl4c_nwritten = bytestream_nprintf(&(_mrkl4c_ctx)->bs,          \
+                                          (_mrkl4c_ctx)->bsbufsz,              \
+                                          "%s [%d] %s %s: "                    \
+                                          mod ## _ ## msg ## _FMT,             \
+                                          _mrkl4c_now_str,                     \
                                           _mrkl4c_ctx->cache.pid,              \
                                           mod ## _NAME,                        \
                                           level_names[level],                  \
