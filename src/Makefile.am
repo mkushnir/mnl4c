@@ -8,8 +8,8 @@ distdir = $(top_srcdir)/$(PACKAGE)-$(VERSION)/src
 #   - noinst_HEADERS
 dist_HEADERS =
 
-BUILT_SOURCES = diag.c diag.h logmsg.c logmsg.h
-EXTRA_DIST = diag.txt gen-diag gen-logmsg
+BUILT_SOURCES = diag.c diag.h logdef.c logdef.h
+EXTRA_DIST = diag.txt gen-diag gen-logdev
 CLEANFILES = $(BUILT_SOURCES) *.core core
 #CLEANFILES += *.in
 AM_MAKEFLAGS = -s
@@ -21,7 +21,7 @@ nobase_include_HEADERS = mrkl4c.h
 noinst_HEADERS =
 
 libmrkl4c_la_SOURCES = mrkl4c.c
-nodist_libmrkl4c_la_SOURCES = diag.c logmsg.c
+nodist_libmrkl4c_la_SOURCES = diag.c logdef.c
 
 if DEBUG
 DEBUG_FLAGS = -g -O0 @CC_DEBUG@
@@ -38,8 +38,8 @@ SUBDIRS = .
 diag.c diag.h: diag.txt
 	$(AM_V_GEN) /bin/sh ./gen-diag mrkl4c
 
-logmsg.c logmsg.h: logmsg.txt
-	$(AM_V_GEN) /bin/sh ./gen-logmsg <logmsg.txt
+logdef.c logdef.h: logdef.txt
+	$(AM_V_GEN) /bin/sh ./gen-logdef <logdef.txt
 
 run: all
 	for i in $(bin_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;
