@@ -28,7 +28,7 @@ const char *_malloc_options = "AJ";
 #define FOO_LDEBUG(logger, msg, ...) FOO_LOG(logger, LOG_DEBUG, msg, __VA_ARGS__)
 
 #define FOO_LREG(logger, msg, level) \
-    mrkl4c_register_msg(logger, FOO_ ## msg ## _ID, level)
+    mrkl4c_register_msg(logger, FOO_ ## msg ## _ID, level, "FOO_" #msg)
 
 #define FOO_NAME "foo"
 #define FOO_PREFIX _MRKL4C_TSPIDMOD_FMT

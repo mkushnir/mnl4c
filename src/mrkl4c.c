@@ -384,6 +384,14 @@ writer_fini(mrkl4c_writer_t *writer)
 }
 
 
+static int
+minfo_fini(mrkl4c_minfo_t *minfo)
+{
+    BYTES_DECREF(&minfo->name);
+    return 0;
+}
+
+
 static mrkl4c_ctx_t *
 mrkl4c_ctx_new(ssize_t bsbufsz)
 {
@@ -397,7 +405,11 @@ mrkl4c_ctx_new(ssize_t bsbufsz)
     bytestream_init(&res->bs, bsbufsz);
     writer_init(&res->writer);
     cache_init(&res->cache);
-    array_init(&res->minfos, sizeof(mrkl4c_minfo_t), 0, NULL, NULL);
+    array_init(&res->minfos,
+               sizeof(mrkl4c_minfo_t),
+               0,
+               NULL,
+               (array_finalizer_t)minfo_fini);
     res->ty = 0;
     return res;
 }
@@ -446,7 +458,7 @@ mrkl4c_set_bufsz(mrkl4c_logger_t ld, ssize_t sz)
 
 
 void
-mrkl4c_register_msg(mrkl4c_logger_t ld, int id, int level)
+mrkl4c_register_msg(mrkl4c_logger_t ld, int id, int level, const char *name)
 {
     mrkl4c_ctx_t **pctx;
     mrkl4c_minfo_t *minfo;
@@ -460,6 +472,8 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int id, int level)
     }
     minfo->id = id;
     minfo->level = level;
+    minfo->name = bytes_new_from_str(name);
+    BYTES_INCREF(minfo->name);
 }
 
 
