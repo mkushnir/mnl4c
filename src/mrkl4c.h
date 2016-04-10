@@ -88,6 +88,7 @@ mrkl4c_ctx_t *mrkl4c_get_ctx(mrkl4c_logger_t);
 int mrkl4c_ctx_allowed(mrkl4c_ctx_t *, int, int);
 int mrkl4c_close(mrkl4c_logger_t);
 void mrkl4c_register_msg(mrkl4c_logger_t, int, int, const char *);
+int mrkl4c_set_level(mrkl4c_logger_t, int, bytes_t *);
 void mrkl4c_init(void);
 void mrkl4c_fini(void);
 

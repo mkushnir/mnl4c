@@ -439,7 +439,7 @@ mrkl4c_ctx_allowed(mrkl4c_ctx_t *ctx, int level, int id)
     }
     assert(minfo->id == id);
     assert(level >= 0 && (size_t)level < countof(level_names));
-    return minfo->level <= level;
+    return minfo->level >= level;
 }
 
 
@@ -474,6 +474,31 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int id, int level, const char *name)
     minfo->level = level;
     minfo->name = bytes_new_from_str(name);
     BYTES_INCREF(minfo->name);
+}
+
+
+int
+mrkl4c_set_level(mrkl4c_logger_t ld, int level, bytes_t *prefix)
+{
+    mrkl4c_ctx_t **pctx;
+    mrkl4c_minfo_t *minfo;
+    array_iter_t it;
+    int res;
+
+    if ((pctx = array_get(&ctxes, ld)) == NULL) {
+        FAIL("array_get");
+    }
+
+    res = 0;
+    for (minfo = array_first(&(*pctx)->minfos, &it);
+         minfo != NULL;
+         minfo = array_next(&(*pctx)->minfos, &it)) {
+        if (bytes_startswith(minfo->name, prefix)) {
+            minfo->level = level;
+            ++res;
+        }
+    }
+    return res;
 }
 
 
