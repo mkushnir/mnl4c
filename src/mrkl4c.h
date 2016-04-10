@@ -110,10 +110,10 @@ UNUSED static const char *level_names[] = {
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE(ld, level, mod, msg, ...)                 \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
-        ssize_t _mrkl4c_nwritten;                                              \
         _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
         assert(_mrkl4c_ctx != NULL);                                           \
         if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            ssize_t _mrkl4c_nwritten;                                          \
             assert((_mrkl4c_ctx)->writer.write != NULL);                       \
             (_mrkl4c_ctx)->writer.data.file.curtm = mrkl4c_now_posix();        \
             _mrkl4c_nwritten = bytestream_nprintf(&(_mrkl4c_ctx)->bs,          \
@@ -129,9 +129,10 @@ UNUSED static const char *level_names[] = {
             if (_mrkl4c_nwritten < 0) {                                        \
                 bytestream_rewind(&(_mrkl4c_ctx)->bs);                         \
             } else {                                                           \
-                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 2, "\n");             \
+                SADVANCEPOS(&(_mrkl4c_ctx)->bs, -1);                           \
+                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 1, "\n");             \
                 (_mrkl4c_ctx)->writer.write(_mrkl4c_ctx);                      \
-                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten + 1; \
+                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten;     \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -140,10 +141,10 @@ UNUSED static const char *level_names[] = {
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(ld, level, mod, msg, ...)              \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
-        ssize_t _mrkl4c_nwritten;                                              \
         _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
         assert(_mrkl4c_ctx != NULL);                                           \
         if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            ssize_t _mrkl4c_nwritten;                                          \
             struct tm *_mrkl4c_tm;                                             \
             time_t _mtkl4c_now;                                                \
             char _mrkl4c_now_str[32];                                          \
@@ -167,9 +168,10 @@ UNUSED static const char *level_names[] = {
             if (_mrkl4c_nwritten < 0) {                                        \
                 bytestream_rewind(&(_mrkl4c_ctx)->bs);                         \
             } else {                                                           \
-                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 2, "\n");             \
+                SADVANCEPOS(&(_mrkl4c_ctx)->bs, -1);                           \
+                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 1, "\n");             \
                 (_mrkl4c_ctx)->writer.write(_mrkl4c_ctx);                      \
-                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten + 1; \
+                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten;     \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -178,10 +180,10 @@ UNUSED static const char *level_names[] = {
 #define MRKL4C_WRITE_START_PRINTFLIKE(ld, level, mod, msg, ...)                \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
-        ssize_t _mrkl4c_nwritten;                                              \
         _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
         assert(_mrkl4c_ctx != NULL);                                           \
         if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            ssize_t _mrkl4c_nwritten;                                          \
             (_mrkl4c_ctx)->writer.data.file.curtm = mrkl4c_now_posix();        \
             _mrkl4c_nwritten = bytestream_nprintf(&(_mrkl4c_ctx)->bs,          \
                                           (_mrkl4c_ctx)->bsbufsz,              \
@@ -198,10 +200,10 @@ UNUSED static const char *level_names[] = {
 #define MRKL4C_WRITE_START_PRINTFLIKE_TM(ld, level, mod, msg, ...)             \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
-        ssize_t _mrkl4c_nwritten;                                              \
         _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
         assert(_mrkl4c_ctx != NULL);                                           \
         if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            ssize_t _mrkl4c_nwritten;                                          \
             struct tm *_mrkl4c_tm;                                             \
             time_t _mtkl4c_now;                                                \
             char _mrkl4c_now_str[32];                                          \
@@ -234,9 +236,10 @@ UNUSED static const char *level_names[] = {
             if (_mrkl4c_nwritten < 0) {                                        \
                 bytestream_rewind(&(_mrkl4c_ctx)->bs);                         \
             } else {                                                           \
-                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 2, "\n");             \
+                SADVANCEPOS(&(_mrkl4c_ctx)->bs, -1);                           \
+                (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 1, "\n");             \
                 (_mrkl4c_ctx)->writer.write(_mrkl4c_ctx);                      \
-                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten + 1; \
+                (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten;     \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
