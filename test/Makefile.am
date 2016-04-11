@@ -10,14 +10,14 @@ distdir = $(top_srcdir)/$(PACKAGE)-$(VERSION)/test
 #   - dist_HEADERS
 #   - nodist_HEADERS
 #   - noinst_HEADERS
-dist_HEADERS =
+dist_HEADERS = unittest.h ../src/mrkl4c.h
 
 noinst_PROGRAMS=testfoo
 
 BUILT_SOURCES = diag.c diag.h
 EXTRA_DIST = diag.txt gen-diag
 
-noinst_HEADERS = unittest.h ../src/mrkl4c.h
+noinst_HEADERS =
 
 if DEBUG
 DEBUG_FLAGS = -g -O0 @CC_DEBUG@
