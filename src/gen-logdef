@@ -54,9 +54,14 @@ do
         mid=$a
         write_macros $a "$b"
     else
+        if ! grep --exclude '*logdef.*' -rn "\\b${a}\\b" . >/dev/null 2>&1
+        then
+            echo "//not used" >>logdef.c
+            echo "//not used" >>logdef.h
+        fi
         echo "#define ${mid}_${a}_ID $n" >>logdef.h
         echo "#define ${mid}_${a}_FMT $c" >>logdef.h
-        echo "    ${mid}_LREG(logger, $a, $b);" >>logdef.c
+        echo "    ${mid}_LREG($a, $b);" >>logdef.c
         n=$(( $n + 1 ))
     fi
 done
