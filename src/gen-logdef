@@ -61,7 +61,7 @@ do
         fi
         echo "#define ${mid}_${a}_ID $n" >>logdef.h
         echo "#define ${mid}_${a}_FMT $c" >>logdef.h
-        echo "    ${mid}_LREG($a, $b);" >>logdef.c
+        echo "    ${mid}_LREG(logger, $a, $b);" >>logdef.c
         n=$(( $n + 1 ))
     fi
 done
