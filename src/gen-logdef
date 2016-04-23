@@ -26,7 +26,7 @@ write_macros() {
 #define ${_n}_LWARNING(logger, msg, ...) ${_n}_LOG_LT(logger, LOG_WARNING, msg, __VA_ARGS__)
 #define ${_n}_LINFO(logger, msg, ...) ${_n}_LOG_LT(logger, LOG_INFO, msg, __VA_ARGS__)
 #define ${_n}_LDEBUG(logger, msg, ...) ${_n}_LOG(logger, LOG_DEBUG, msg, __VA_ARGS__)
-#define ${_n}_LREG(logger, msg, level) mrkl4c_register_msg(logger, ${_n}_ ## msg ## _ID, level, "${_n}" "_" #msg)
+#define ${_n}_LREG(logger, level, msg) mrkl4c_register_msg(logger, level, ${_n}_ ## msg ## _ID, "${_n}" "_" #msg)
 #define ${_n}_NAME ${_m}
 #define ${_n}_PREFIX _MRKL4C_TSPIDMOD_FMT
 #define ${_n}_ARGS _MRKL4C_TSPIDMOD_ARGS(${_n})
@@ -54,13 +54,13 @@ do
         mid=$a
         write_macros $a "$b"
     else
-        if ! grep --exclude '*logdef.*' -rn "\\b${a}\\b" . >/dev/null 2>&1
+        if ! grep --exclude '*logdef.*' -rn "\\b${b}\\b" . >/dev/null 2>&1
         then
             echo "//not used" >>logdef.c
             echo "//not used" >>logdef.h
         fi
-        echo "#define ${mid}_${a}_ID $n" >>logdef.h
-        echo "#define ${mid}_${a}_FMT $c" >>logdef.h
+        echo "#define ${mid}_${b}_ID $n" >>logdef.h
+        echo "#define ${mid}_${b}_FMT $c" >>logdef.h
         echo "    ${mid}_LREG(logger, $a, $b);" >>logdef.c
         n=$(( $n + 1 ))
     fi

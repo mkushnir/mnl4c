@@ -460,7 +460,7 @@ mrkl4c_set_bufsz(mrkl4c_logger_t ld, ssize_t sz)
 
 
 void
-mrkl4c_register_msg(mrkl4c_logger_t ld, int id, int level, const char *name)
+mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
 {
     mrkl4c_ctx_t **pctx;
     mrkl4c_minfo_t *minfo;

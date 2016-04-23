@@ -1,2 +1,2 @@
 FOO "foo"
-    QWE LOG_INFO "This is the test"
+    LOG_INFO QWE "This is the test"
