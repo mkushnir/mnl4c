@@ -37,7 +37,7 @@ mrkl4c_now_posix(void){
 static void
 mrkl4c_write_stdout(mrkl4c_ctx_t *ctx)
 {
-    *SDATA(&ctx->bs, SEOD(&ctx->bs)) = '\0';
+    (void)bytestream_cat(&ctx->bs, 1, "");
     fprintf(stdout, "%s", SDATA(&ctx->bs, 0));
     bytestream_rewind(&ctx->bs);
 }
@@ -46,7 +46,7 @@ mrkl4c_write_stdout(mrkl4c_ctx_t *ctx)
 static void
 mrkl4c_write_stderr(mrkl4c_ctx_t *ctx)
 {
-    *SDATA(&ctx->bs, SEOD(&ctx->bs)) = '\0';
+    (void)bytestream_cat(&ctx->bs, 1, "");
     fprintf(stderr, "%s", SDATA(&ctx->bs, 0));
     bytestream_rewind(&ctx->bs);
 }

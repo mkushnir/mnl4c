@@ -103,9 +103,6 @@ UNUSED static const char *level_names[] = {
     "DEBUG",
 };
 
-#define _MRKL4C_CAT(a, b) a ## b
-
-#define _MRKL4C_ARGS(prefix) _MRKL4C_CAT(prefix, _ARGS)
 
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE(ld, level, mod, msg, ...)                 \
     do {                                                                       \
