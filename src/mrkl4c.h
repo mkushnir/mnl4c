@@ -234,6 +234,9 @@ UNUSED static const char *level_names[] = {
                 bytestream_rewind(&(_mrkl4c_ctx)->bs);                         \
             } else {                                                           \
                 SADVANCEPOS(&(_mrkl4c_ctx)->bs, -1);                           \
+                (void)bytestream_nprintf(&(_mrkl4c_ctx)->bs,                   \
+                                         (_mrkl4c_ctx)->bsbufsz,               \
+                                         mod ## _ ## msg ## _FMT);             \
                 (void)bytestream_cat(&(_mrkl4c_ctx)->bs, 1, "\n");             \
                 (_mrkl4c_ctx)->writer.write(_mrkl4c_ctx);                      \
                 (_mrkl4c_ctx)->writer.data.file.cursz += _mrkl4c_nwritten;     \
