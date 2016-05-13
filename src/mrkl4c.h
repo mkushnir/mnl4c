@@ -194,7 +194,7 @@ UNUSED static const char *level_names[] = {
                                           __VA_ARGS__)                         \
 
 
-#define MRKL4C_WRITE_START_PRINTFLIKE_TM(ld, level, mod, msg, ...)             \
+#define MRKL4C_WRITE_START_PRINTFLIKE_LT(ld, level, mod, msg, ...)             \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
         _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
