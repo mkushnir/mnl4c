@@ -9,7 +9,7 @@ distdir = $(top_srcdir)/$(PACKAGE)-$(VERSION)/src
 dist_HEADERS =
 
 BUILT_SOURCES = diag.c diag.h logdef.c logdef.h
-EXTRA_DIST = diag.txt gen-diag gen-logdev
+EXTRA_DIST = diag.txt gen-diag gen-logdef
 CLEANFILES = $(BUILT_SOURCES) *.core core
 #CLEANFILES += *.in
 AM_MAKEFLAGS = -s
