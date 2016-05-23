@@ -517,6 +517,10 @@ mrkl4c_open(unsigned ty, ...)
     array_iter_t it;
 
     fpath = NULL;
+    maxsz = 0;
+    maxtm = 0;
+    maxfiles = 0;
+    flags = 0;
 
     if ((ty & MRKL4C_OPEN_FLOCK) &&
         ((ty & MRKL4C_OPEN_TY) != MRKL4C_OPEN_FILE)) {
