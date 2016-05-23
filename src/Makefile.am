@@ -29,9 +29,9 @@ else
 DEBUG_FLAGS = -DNDEBUG -O3
 endif
 
-libmrkl4c_la_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
+libmrkl4c_la_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @MRKCOMMON_LOCAL_CFLAGS@ @_GNU_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
 
-libmrkl4c_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon
+libmrkl4c_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon @MRKCOMMON_LOCAL_LDFLAGS@
 
 SUBDIRS = .
 
