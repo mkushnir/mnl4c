@@ -42,7 +42,7 @@ while read a b c
 do
     if echo $a | grep '^#' >/dev/null 2>&1
     then
-        echo $a $b $c | sed -E 's/^#/\/\//' >>logdef.h
+        echo $a $b $c | sed -r 's/^#/\/\//' >>logdef.h
         continue
     fi
     if test -z "$c"
