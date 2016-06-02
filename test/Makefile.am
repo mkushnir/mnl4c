@@ -2,7 +2,6 @@ CLEANFILES = *.core core
 #CLEANFILES += *.in
 AM_MAKEFLAGS = -s
 
-distdir = $(top_srcdir)/$(PACKAGE)-$(VERSION)/test
 # consider headers:
 #   - include_HEADERS
 #   - nobase_include_HEADERS
@@ -10,14 +9,13 @@ distdir = $(top_srcdir)/$(PACKAGE)-$(VERSION)/test
 #   - dist_HEADERS
 #   - nodist_HEADERS
 #   - noinst_HEADERS
-dist_HEADERS = unittest.h ../src/mrkl4c.h
 
 noinst_PROGRAMS=testfoo
 
 BUILT_SOURCES = diag.c diag.h
 EXTRA_DIST = diag.txt gen-diag
 
-noinst_HEADERS =
+noinst_HEADERS = unittest.h ../src/mrkl4c.h
 
 if DEBUG
 DEBUG_FLAGS = -g -O0 @CC_DEBUG@

@@ -1,4 +1,3 @@
-distdir = $(top_srcdir)/$(PACKAGE)-$(VERSION)/src
 # consider headers:
 #   - include_HEADERS
 #   - nobase_include_HEADERS
@@ -6,7 +5,6 @@ distdir = $(top_srcdir)/$(PACKAGE)-$(VERSION)/src
 #   - dist_HEADERS
 #   - nodist_HEADERS
 #   - noinst_HEADERS
-dist_HEADERS =
 
 BUILT_SOURCES = diag.c diag.h logdef.c logdef.h
 EXTRA_DIST = diag.txt gen-diag logdef.txt gen-logdef
