@@ -3,8 +3,8 @@
 :>logdef.h
 :>logdef.c
 
-echo '#include "logdef.h"' >>logdef.c
 echo '#include <mrkl4c.h>' >>logdef.c
+echo '#include "logdef.h"' >>logdef.c
 echo
 echo 'void' >>logdef.c
 echo 'init_logdef(mrkl4c_logger_t logger)' >>logdef.c
@@ -54,10 +54,10 @@ do
         mid=$a
         write_macros $a "$b"
     else
-        if ! grep --exclude '*logdef.*' -rn "\\b${b}\\b" . >/dev/null 2>&1
+        if ! grep --exclude '*logdef.*' -rn "\\b${b}\\b" . | grep "${mid}_" |  grep -v ' *//' >/dev/null 2>&1
         then
-            echo "//not used" >>logdef.c
-            echo "//not used" >>logdef.h
+            echo "// not used:" >>logdef.c
+            echo "// not used:" >>logdef.h
         fi
         echo "#define ${mid}_${b}_ID $n" >>logdef.h
         echo "#define ${mid}_${b}_FMT $c" >>logdef.h
@@ -66,3 +66,4 @@ do
     fi
 done
 echo '}' >>logdef.c
+echo 'void init_logdef(mrkl4c_logger_t);' >>logdef.h
