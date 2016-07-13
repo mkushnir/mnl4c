@@ -315,6 +315,17 @@ UNUSED static const char *level_names[] = {
 
 
 
+#define MRKL4C_ALLOWED_AT(ld, level, mod, msg, __a1)                           \
+    do {                                                                       \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            __a1                                                               \
+        }                                                                      \
+    } while (0)                                                                \
+
+
 #ifdef __cplusplus
 }
 #endif
