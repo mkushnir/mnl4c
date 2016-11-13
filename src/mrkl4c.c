@@ -387,6 +387,14 @@ writer_fini(mrkl4c_writer_t *writer)
 
 
 static int
+minfo_init(mrkl4c_minfo_t *minfo)
+{
+    minfo->name = NULL;
+    return 0;
+}
+
+
+static int
 minfo_fini(mrkl4c_minfo_t *minfo)
 {
     BYTES_DECREF(&minfo->name);
@@ -410,7 +418,7 @@ mrkl4c_ctx_new(ssize_t bsbufsz)
     array_init(&res->minfos,
                sizeof(mrkl4c_minfo_t),
                0,
-               NULL,
+               (array_initializer_t)minfo_init,
                (array_finalizer_t)minfo_fini);
     res->ty = 0;
     return res;
@@ -474,8 +482,14 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
     }
     minfo->id = id;
     minfo->level = level;
-    minfo->name = bytes_new_from_str(name);
-    BYTES_INCREF(minfo->name);
+    if (minfo->name == NULL) {
+        minfo->name = bytes_new_from_str(name);
+        BYTES_INCREF(minfo->name);
+    } else {
+        if (strcmp(name, (char *)BDATA(minfo->name)) != 0) {
+            FAIL("mrkl4c_register_msg");
+        }
+    }
 }
 
 
