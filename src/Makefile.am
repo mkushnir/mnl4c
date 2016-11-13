@@ -33,10 +33,10 @@ libmrkl4c_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon @MRKCOMMON_LO
 
 SUBDIRS = .
 
-diag.c diag.h: diag.txt
+diag.c diag.h: diag.txt gen-diag
 	$(AM_V_GEN) /bin/sh ./gen-diag mrkl4c
 
-logdef.c logdef.h: logdef.txt
+logdef.c logdef.h: logdef.txt gen-logdef
 	$(AM_V_GEN) /bin/sh ./gen-logdef <logdef.txt
 
 run: all

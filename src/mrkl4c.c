@@ -430,7 +430,7 @@ mrkl4c_ctx_destroy(mrkl4c_ctx_t **pctx)
 }
 
 
-int
+bool
 mrkl4c_ctx_allowed(mrkl4c_ctx_t *ctx, int level, int id)
 {
     mrkl4c_minfo_t *minfo;
@@ -662,7 +662,7 @@ mrkl4c_incref(mrkl4c_logger_t ld)
         goto end;
     }
     res = ld;
-    (*pctx)->nref++;
+    ++(*pctx)->nref;
 
 end:
     return res;
@@ -684,7 +684,7 @@ mrkl4c_close(mrkl4c_logger_t ld)
         goto end;
     }
     res = 0;
-    (*pctx)->nref--;
+    --(*pctx)->nref;
     if ((*pctx)->nref <= 0) {
         array_clear_item(&ctxes, ld);
     }

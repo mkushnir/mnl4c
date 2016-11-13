@@ -5,7 +5,7 @@
 
 echo '#include <mrkl4c.h>' >>logdef.c
 echo '#include "logdef.h"' >>logdef.c
-echo
+echo >>logdef.c
 echo 'void' >>logdef.c
 echo 'init_logdef(mrkl4c_logger_t logger)' >>logdef.c
 echo '{' >>logdef.c

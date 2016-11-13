@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <syslog.h>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -85,7 +86,7 @@ mrkl4c_logger_t mrkl4c_open(unsigned, ...);
 int mrkl4c_set_bufsz(mrkl4c_logger_t, ssize_t);
 mrkl4c_logger_t mrkl4c_incref(mrkl4c_logger_t);
 mrkl4c_ctx_t *mrkl4c_get_ctx(mrkl4c_logger_t);
-int mrkl4c_ctx_allowed(mrkl4c_ctx_t *, int, int);
+bool mrkl4c_ctx_allowed(mrkl4c_ctx_t *, int, int);
 int mrkl4c_close(mrkl4c_logger_t);
 void mrkl4c_register_msg(mrkl4c_logger_t, int, int, const char *);
 int mrkl4c_set_level(mrkl4c_logger_t, int, bytes_t *);
