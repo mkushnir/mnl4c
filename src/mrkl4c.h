@@ -29,7 +29,7 @@ typedef struct _mrkl4c_minfo {
      * LOG_*
      */
     int level;
-    bytes_t *name;
+    mnbytes_t *name;
 } mrkl4c_minfo_t;
 
 
@@ -39,8 +39,8 @@ typedef struct _mrkl4c_writer {
     void (*write)(struct _mrkl4c_ctx *);
     union {
         struct {
-            bytes_t *path;
-            bytes_t *shadow_path;
+            mnbytes_t *path;
+            mnbytes_t *shadow_path;
             size_t cursz;
             size_t maxsz;
             double maxtm;
@@ -63,12 +63,12 @@ typedef struct _mrkl4c_cache {
 #define MRKL4C_MAX_MINFOS 1024
 typedef struct _mrkl4c_ctx {
     ssize_t nref;
-    bytestream_t bs;
+    mnbytestream_t bs;
     ssize_t bsbufsz;
     /* strongref */
     mrkl4c_writer_t writer;
     mrkl4c_cache_t cache;
-    array_t minfos;
+    mnarray_t minfos;
     unsigned ty;
 } mrkl4c_ctx_t;
 
@@ -89,7 +89,7 @@ mrkl4c_ctx_t *mrkl4c_get_ctx(mrkl4c_logger_t);
 bool mrkl4c_ctx_allowed(mrkl4c_ctx_t *, int, int);
 int mrkl4c_close(mrkl4c_logger_t);
 void mrkl4c_register_msg(mrkl4c_logger_t, int, int, const char *);
-int mrkl4c_set_level(mrkl4c_logger_t, int, bytes_t *);
+int mrkl4c_set_level(mrkl4c_logger_t, int, mnbytes_t *);
 void mrkl4c_init(void);
 void mrkl4c_fini(void);
 

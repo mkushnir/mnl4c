@@ -23,7 +23,7 @@
 
 #define MRKL4C_DEFAULT_BUFSZ 4096
 
-static array_t ctxes;
+static mnarray_t ctxes;
 
 double
 mrkl4c_now_posix(void){
@@ -76,7 +76,7 @@ _writer_file_cleanup_shadows_cb(const char *path,
 {
     struct {
         char pat[PATH_MAX];
-        array_t files;
+        mnarray_t files;
     } *params = udata;
 
     if (de != NULL) {
@@ -137,13 +137,13 @@ _writer_file_cleanup_shadows_cmp(char **a, char **b)
 static void
 writer_file_cleanup_shadows(mrkl4c_writer_t *writer)
 {
-    bytes_t *tmp;
+    mnbytes_t *tmp;
     struct {
         char pat[PATH_MAX];
-        array_t files;
+        mnarray_t files;
     } params;
     char **fname;
-    array_iter_t it;
+    mnarray_iter_t it;
 
     if (writer->data.file.maxfiles <= 0) {
         return;
@@ -494,11 +494,11 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
 
 
 int
-mrkl4c_set_level(mrkl4c_logger_t ld, int level, bytes_t *prefix)
+mrkl4c_set_level(mrkl4c_logger_t ld, int level, mnbytes_t *prefix)
 {
     mrkl4c_ctx_t **pctx;
     mrkl4c_minfo_t *minfo;
-    array_iter_t it;
+    mnarray_iter_t it;
     int res;
 
     if ((pctx = array_get(&ctxes, ld)) == NULL) {
@@ -528,7 +528,7 @@ mrkl4c_open(unsigned ty, ...)
     size_t maxfiles;
     int flags;
     mrkl4c_ctx_t **pctx;
-    array_iter_t it;
+    mnarray_iter_t it;
 
     fpath = NULL;
     maxsz = 0;
