@@ -1,4 +1,4 @@
-CLEANFILES = *.core core
+CLEANFILES = $(BUILT_SOURCES) *.core core
 #CLEANFILES += *.in
 AM_MAKEFLAGS = -s
 
@@ -12,8 +12,9 @@ AM_MAKEFLAGS = -s
 
 noinst_PROGRAMS=testfoo
 
+diags = ../src/diag.txt diag.txt
 BUILT_SOURCES = diag.c diag.h
-EXTRA_DIST = diag.txt gen-diag
+EXTRA_DIST = diag.txt
 
 noinst_HEADERS = unittest.h ../src/mrkl4c.h
 
@@ -26,10 +27,10 @@ endif
 nodist_testfoo_SOURCES = diag.c
 testfoo_SOURCES = testfoo.c
 testfoo_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ -I$(top_srcdir)/test -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
-testfoo_LDFLAGS = -L$(libdir) -lmrkcommon -L$(top_srcdir)/src/.libs -lmrkl4c
+testfoo_LDFLAGS = -L$(libdir) -lmrkcommon -L$(top_srcdir)/src/.libs -lmrkl4c -lmndiag
 
-diag.c diag.h: diag.txt gen-diag
-	$(AM_V_GEN) cat diag.txt | sort -u | /bin/sh ./gen-diag mrkl4c
+diag.c diag.h: $(diags)
+	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -S diag.txt.tmp -L mrkl4c -H diag.h -C diag.c ../*.[ch] ./*.[ch]
 
 testrun: all
 	for i in $(noinst_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;
