@@ -35,7 +35,7 @@ libmrkl4c_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkcommon -lmndiag @MRK
 SUBDIRS = .
 
 diag.c diag.h: $(diags)
-	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -S diag.txt.tmp -L mrkl4c -H diag.h -C diag.c *.[ch]
+	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrkl4c -H diag.h -C diag.c *.[ch]
 
 logdef.c logdef.h: logdef.txt gen-logdef
 	$(AM_V_GEN) /bin/sh ./gen-logdef <logdef.txt
