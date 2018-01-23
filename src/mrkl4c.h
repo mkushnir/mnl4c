@@ -299,14 +299,15 @@ UNUSED static const char *level_names[] = {
                                      __VA_ARGS__)                      \
 
 
-#define MRKL4C_WRITE_STOP_PRINTFLIKE(ld, level, mod, msg)                      \
+#define MRKL4C_WRITE_STOP_PRINTFLIKE(ld, level, mod, msg, ...)                 \
             if (_mrkl4c_nwritten < 0) {                                        \
                 bytestream_rewind(&_mrkl4c_ctx->bs);                           \
             } else {                                                           \
                 SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
                 (void)bytestream_nprintf(&_mrkl4c_ctx->bs,                     \
                                          _mrkl4c_ctx->bsbufsz,                 \
-                                         mod ## _ ## msg ## _FMT);             \
+                                         mod ## _ ## msg ## _FMT,              \
+                                         __VA_ARGS__);                         \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
                 _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \

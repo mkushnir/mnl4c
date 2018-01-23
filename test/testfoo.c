@@ -19,8 +19,8 @@ const char *_malloc_options = "AJ";
 #define FOO_LOG_NEXT(logger, level, msg, fmt, ...) \
     MRKL4C_WRITE_NEXT_PRINTFLIKE(logger, level, FOO, msg, fmt, __VA_ARGS__)
 
-#define FOO_LOG_STOP(logger, level, msg) \
-    MRKL4C_WRITE_STOP_PRINTFLIKE(logger, level, FOO, msg)
+#define FOO_LOG_STOP(logger, level, msg, ...) \
+    MRKL4C_WRITE_STOP_PRINTFLIKE(logger, level, FOO, msg, __VA_ARGS__)
 
 #define FOO_LERROR(logger, msg, ...) FOO_LOG(logger, LOG_ERR, msg, __VA_ARGS__)
 #define FOO_LWARNING(logger, msg, ...) FOO_LOG(logger, LOG_WARNING, msg, __VA_ARGS__)
@@ -28,7 +28,7 @@ const char *_malloc_options = "AJ";
 #define FOO_LDEBUG(logger, msg, ...) FOO_LOG(logger, LOG_DEBUG, msg, __VA_ARGS__)
 
 #define FOO_LREG(logger, msg, level) \
-    mrkl4c_register_msg(logger, FOO_ ## msg ## _ID, level, "FOO_" #msg)
+    mrkl4c_register_msg(logger, level, FOO_ ## msg ## _ID, "FOO_" #msg)
 
 #define FOO_NAME "foo"
 #define FOO_PREFIX _MRKL4C_TSPIDMOD_FMT
@@ -37,11 +37,15 @@ const char *_malloc_options = "AJ";
 #define FOO_QWE_ID 0
 #define FOO_QWE_FMT "int %d double %lf str %s"
 #define FOO_ASD_ID 1
-#define FOO_ASD_FMT "%s ..."
+#define FOO_ASD_FMT "%s"
+
+
+static mnbytes_t _FOO = BYTES_INITIALIZER("FOO");
 
 static void
 test0(void)
 {
+    int res;
     mrkl4c_logger_t logger0;
     mrkl4c_logger_t logger1;
     struct {
@@ -62,7 +66,7 @@ test0(void)
 
     logger0 = mrkl4c_open(MRKL4C_OPEN_STDERR);
     assert(logger0 != -1);
-    logger1 = mrkl4c_open(MRKL4C_OPEN_FILE, "/data2/mkushnir/development/mrkl4c/foo.log", 4096, 20.0, 10, 0);
+    logger1 = mrkl4c_open(MRKL4C_OPEN_FILE, "/tmp/mrkl4c-testfoo.log", 4096, 20.0, 10, 0);
     assert(logger1 != -1);
 
     FOO_LREG(logger0, QWE, LOG_INFO);
@@ -84,17 +88,22 @@ test0(void)
     FOO_LINFO(logger1, QWE, 11, 22.22, "qweQWEQWEQWE!@#!@#!@");
 
     /* complex */
-    FOO_LOG_START(logger0, LOG_DEBUG, ASD, "asdASDASDASDASD");
-    FOO_LOG_START(logger1, LOG_DEBUG, ASD, "asdASDASDASDASD");
+    res = mrkl4c_set_level(logger1, LOG_DEBUG, &_FOO);
+    FOO_LOG_START(logger0, LOG_DEBUG, ASD, "start:");
     for (i = 0; i < 12; ++i) {
         FOO_LOG_NEXT(logger0, LOG_DEBUG, ASD, " %d", i);
+    }
+    FOO_LOG_STOP(logger0, LOG_DEBUG, ASD, " Stop.");
+
+    FOO_LOG_START(logger1, LOG_DEBUG, ASD, "start:");
+    for (i = 0; i < 12; ++i) {
         FOO_LOG_NEXT(logger1, LOG_DEBUG, ASD, " %d", i);
     }
-    FOO_LOG_STOP(logger0, LOG_DEBUG, ASD);
-    FOO_LOG_STOP(logger1, LOG_DEBUG, ASD);
+    FOO_LOG_STOP(logger1, LOG_DEBUG, ASD, " Stop.");
 
 
     (void)mrkl4c_close(logger0);
+    (void)mrkl4c_close(logger1);
     mrkl4c_fini();
 }
 
