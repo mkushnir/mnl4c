@@ -107,7 +107,7 @@ render_head(FILE *fhout, FILE *fcout, const char *hout, const char *lib)
 
     macroname_translate(hout_macroname);
     fprintf(fcout, "#include <mrkl4c.h>\n");
-    fprintf(fcout, "#include <%s>\n", hout);
+    fprintf(fcout, "#include \"%s\"\n", hout);
     fprintf(fcout,
         "void\n"
         "%s_init_logdef(mrkl4c_logger_t logger)\n"
