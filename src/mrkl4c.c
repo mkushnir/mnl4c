@@ -11,6 +11,7 @@
 
 #include <mrkcommon/array.h>
 #include <mrkcommon/bytestream.h>
+#define TRRET_DEBUG
 #include <mrkcommon/dumpm.h>
 #include <mrkcommon/traversedir.h>
 #include <mrkcommon/util.h>
@@ -306,17 +307,22 @@ writer_file_open(mrkl4c_writer_t *writer)
      * finally:
      *  rollover
      */
+    memset(&sb, '\0', sizeof(struct stat));
+
     if (lstat((char *)BDATA(writer->data.file.path), &sb) != 0) {
         if (writer_file_new_shadow(writer) != 0) {
             TRRET(WRITER_FILE_OPEN + 1);
         }
+        if (lstat((char *)BDATA(writer->data.file.path), &sb) != 0) {
+            TRRET(WRITER_FILE_OPEN + 2);
+        }
     }
     if (!S_ISLNK(sb.st_mode)) {
         if (unlink((char *)BDATA(writer->data.file.path)) != 0) {
-            TRRET(WRITER_FILE_OPEN + 2);
+            TRRET(WRITER_FILE_OPEN + 3);
         }
         if (writer_file_new_shadow(writer) != 0) {
-            TRRET(WRITER_FILE_OPEN + 3);
+            TRRET(WRITER_FILE_OPEN + 4);
         }
     } else {
         char buf[PATH_MAX];
@@ -326,7 +332,7 @@ writer_file_open(mrkl4c_writer_t *writer)
         if ((nread = readlink((char *)BDATA(writer->data.file.path),
                              buf,
                              sizeof(buf))) < 0) {
-            TRRET(WRITER_FILE_OPEN + 4);
+            TRRET(WRITER_FILE_OPEN + 5);
         }
         buf[nread] = '\0';
         BYTES_DECREF(&writer->data.file.shadow_path);
@@ -334,14 +340,14 @@ writer_file_open(mrkl4c_writer_t *writer)
         if (lstat((char *)BDATA(writer->data.file.shadow_path),
             &writer->data.file.sb) != 0) {
             if (writer_file_new_shadow(writer) != 0) {
-                TRRET(WRITER_FILE_OPEN + 5);
+                TRRET(WRITER_FILE_OPEN + 6);
             }
         }
         writer->data.file.cursz = writer->data.file.sb.st_size;
 #ifdef HAVE_ST_BIRTHTIM
         writer->data.file.starttm = writer->data.file.sb.st_birthtim.tv_sec;
 #else
-    writer->data.file.starttm = writer->data.file.sb.st_ctime;
+        writer->data.file.starttm = writer->data.file.sb.st_ctime;
 #endif
     }
     /*
@@ -644,7 +650,7 @@ mrkl4c_open(unsigned ty, ...)
 
 err:
     (void)mrkl4c_close((mrkl4c_logger_t)it.iter);
-    return -1;
+    return MRKL4C_LOGGER_INVALID;
 }
 
 
@@ -668,11 +674,11 @@ mrkl4c_incref(mrkl4c_logger_t ld)
     mrkl4c_ctx_t **pctx;
 
     if ((pctx = array_get(&ctxes, ld)) == NULL) {
-        res = -1;
+        res = MRKL4C_LOGGER_INVALID;
         goto end;
     }
     if (*pctx == NULL) {
-        res = -1;
+        res = MRKL4C_LOGGER_INVALID;
         goto end;
     }
     res = ld;
