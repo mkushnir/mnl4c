@@ -1,0 +1,36 @@
+# This is log definitions fo foo and bar
+#timestamp-format epoch
+#timestamp-format datetime
+#timestamp-format epoch datetime
+
+#context
+#context-format
+#context-args
+
+BAR "bar"
+
+FOO "foo"
+    LOG_INFO QWE "Foo 0: Number %d, price %f name %s"
+    LOG_DEBUG ASD "\nFoo 0: This is the test: %s"
+    LOG_INFO ZXC "Hey!"
+
+    aaa
+
+
+FOO "foo"
+    LOG_INFO QWE1 "Foo 1: Number %d, price %f name %s"
+    LOG_DEBUG ASD1 "\nFoo 1: %s"
+
+    aaa
+
+BAR "BAR"
+    LOG_INFO QWE "Bar 0: Number %d, price %f name %s"
+    LOG_DEBUG ASD1 " %s"
+
+#context LZERO
+#context-format "%d %s:"
+#context-args _my_number, BDATA(&_lz)
+#context-scope BAR
+
+# # # #
+#### ### ##

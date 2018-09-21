@@ -1,2 +1,0 @@
-FOO "foo"
-    LOG_INFO QWE "This is the test"

@@ -5,42 +5,18 @@
 #include <mrkl4c.h>
 
 #include "unittest.h"
+#include "my-logdef.h"
 
 #ifndef NDEBUG
 const char *_malloc_options = "AJ";
 #endif
 
-#define FOO_LOG(logger, level, msg, ...) \
-    MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, FOO, msg, __VA_ARGS__)
-
-#define FOO_LOG_START(logger, level, msg, ...) \
-    MRKL4C_WRITE_START_PRINTFLIKE(logger, level, FOO, msg, __VA_ARGS__)
-
-#define FOO_LOG_NEXT(logger, level, msg, fmt, ...) \
-    MRKL4C_WRITE_NEXT_PRINTFLIKE(logger, level, FOO, msg, fmt, __VA_ARGS__)
-
-#define FOO_LOG_STOP(logger, level, msg, ...) \
-    MRKL4C_WRITE_STOP_PRINTFLIKE(logger, level, FOO, msg, __VA_ARGS__)
-
-#define FOO_LERROR(logger, msg, ...) FOO_LOG(logger, LOG_ERR, msg, __VA_ARGS__)
-#define FOO_LWARNING(logger, msg, ...) FOO_LOG(logger, LOG_WARNING, msg, __VA_ARGS__)
-#define FOO_LINFO(logger, msg, ...) FOO_LOG(logger, LOG_INFO, msg, __VA_ARGS__)
-#define FOO_LDEBUG(logger, msg, ...) FOO_LOG(logger, LOG_DEBUG, msg, __VA_ARGS__)
-
-#define FOO_LREG(logger, msg, level) \
-    mrkl4c_register_msg(logger, level, FOO_ ## msg ## _ID, "FOO_" #msg)
-
-#define FOO_NAME "foo"
-#define FOO_PREFIX _MRKL4C_TSPIDMOD_FMT
-#define FOO_ARGS _MRKL4C_TSPIDMOD_ARGS(FOO)
-
-#define FOO_QWE_ID 0
-#define FOO_QWE_FMT "int %d double %lf str %s"
-#define FOO_ASD_ID 1
-#define FOO_ASD_FMT "%s"
-
-
 static mnbytes_t _FOO = BYTES_INITIALIZER("FOO");
+static int _my_number = 1;
+static mnbytes_t _lz = BYTES_INITIALIZER("L0");
+
+#define LZERO_FOO_LERROR(msg, ...) FOO_CONTEXT_LERROR(logger0, FRED("%d %s: "), msg, _my_number, BDATA(&_lz), ##__VA_ARGS__)
+#define LZERO_FOO_LINFO(msg, ...) FOO_CONTEXT_LINFO(logger0, FGREEN("%d %s: "), msg, _my_number, BDATA(&_lz), ##__VA_ARGS__)
 
 static void
 test0(void)
@@ -66,22 +42,22 @@ test0(void)
 
     logger0 = mrkl4c_open(MRKL4C_OPEN_STDERR);
     assert(logger0 != -1);
+    foo_init_logdef(logger0);
     logger1 = mrkl4c_open(MRKL4C_OPEN_FILE, "/tmp/mrkl4c-testfoo.log", 4096, 20.0, 10, 0);
     assert(logger1 != -1);
-
-    FOO_LREG(logger0, QWE, LOG_INFO);
-    FOO_LREG(logger0, ASD, LOG_ERR);
-
-    FOO_LREG(logger1, QWE, LOG_ERR);
-    FOO_LREG(logger1, ASD, LOG_ERR);
+    foo_init_logdef(logger1);
 
     FOO_LERROR(logger0, QWE, 1, 2.0, "qwe123123123123123123123");
     FOO_LERROR(logger1, QWE, 1, 2.0, "qwe123123123123123123123");
+    FOO_LINFO(logger0, ZXC);
+    FOO_LINFO(logger1, ZXC);
+    LZERO_FOO_LERROR(QWE, 100, 200.0, "QWE12300");
+    LZERO_FOO_LINFO(ZXC);
 
-    FOO_LWARNING(logger0, QWE, 11, 22.22,
+    FOO_LWARNING(logger0, QWE1, 11, 22.22,
             "qweQWEQWEQWE!@#!@#!@~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 
-    FOO_LWARNING(logger1, QWE, 11, 22.22,
+    FOO_LWARNING(logger1, QWE1, 11, 22.22,
             "qweQWEQWEQWE!@#!@#!@~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 
     FOO_LINFO(logger0, QWE, 11, 22.22, "qweQWEQWEQWE!@#!@#!@");
@@ -95,11 +71,17 @@ test0(void)
     }
     FOO_LOG_STOP(logger0, LOG_DEBUG, ASD, " Stop.");
 
-    FOO_LOG_START(logger1, LOG_DEBUG, ASD, "start:");
+    FOO_LOG_START(logger1, LOG_DEBUG, ASD1, "start:");
     for (i = 0; i < 12; ++i) {
-        FOO_LOG_NEXT(logger1, LOG_DEBUG, ASD, " %d", i);
+        FOO_LOG_NEXT(logger1, LOG_DEBUG, ASD1, " %d", i);
     }
-    FOO_LOG_STOP(logger1, LOG_DEBUG, ASD, " Stop.");
+    FOO_LOG_STOP(logger1, LOG_DEBUG, ASD1, " Stop.");
+
+    BAR_LOG_START(logger1, LOG_DEBUG, ASD1, "start:");
+    for (i = 0; i < 12; ++i) {
+        BAR_LOG_NEXT(logger1, LOG_DEBUG, ASD1, " %d", i);
+    }
+    BAR_LOG_STOP(logger1, LOG_DEBUG, ASD1, " Stop.");
 
 
     (void)mrkl4c_close(logger0);

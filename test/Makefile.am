@@ -13,8 +13,8 @@ AM_MAKEFLAGS = -s
 noinst_PROGRAMS=testfoo
 
 diags = ../src/diag.txt diag.txt
-BUILT_SOURCES = diag.c diag.h
-EXTRA_DIST = diag.txt
+BUILT_SOURCES = diag.c diag.h my-logdef.c my-logdef.h
+EXTRA_DIST = diag.txt logdef.txt
 
 noinst_HEADERS = unittest.h ../src/mrkl4c.h
 
@@ -24,13 +24,16 @@ else
 DEBUG_FLAGS = -DNDEBUG -O3
 endif
 
-nodist_testfoo_SOURCES = diag.c
+nodist_testfoo_SOURCES = diag.c my-logdef.c
 testfoo_SOURCES = testfoo.c
 testfoo_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ -I$(top_srcdir)/test -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
 testfoo_LDFLAGS = -L$(libdir) -lmrkcommon -L$(top_srcdir)/src/.libs -lmrkl4c -lmndiag
 
 diag.c diag.h: $(diags)
 	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrkl4c -H diag.h -C diag.c ../*.[ch] ./*.[ch]
+
+my-logdef.c my-logdef.h: logdef.txt
+	$(AM_V_GEN) ../src/l4cdefgen --lib foo --hout my-logdef.h --cout my-logdef.c logdef.txt
 
 testrun: all
 	for i in $(noinst_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;
