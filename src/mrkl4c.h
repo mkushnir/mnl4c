@@ -104,6 +104,71 @@ UNUSED static const char *level_names[] = {
     "DEBUG",
 };
 
+#define MRKL4C_WRITE_MAYBE_PRINTFLIKE(ld, level, mod, msg, ...)                \
+    do {                                                                       \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            ssize_t _mrkl4c_nwritten;                                          \
+            assert(_mrkl4c_ctx->writer.write != NULL);                         \
+            _mrkl4c_ctx->writer.data.file.curtm = mrkl4c_now_posix();          \
+            _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,            \
+                                          _mrkl4c_ctx->bsbufsz,                \
+                                          "%.06lf [%d] %s %s: "                \
+                                          mod ## _ ## msg ## _FMT,             \
+                                          _mrkl4c_ctx->                        \
+                                            writer.data.file.curtm,            \
+                                          _mrkl4c_ctx->cache.pid,              \
+                                          mod ## _NAME,                        \
+                                          level_names[level],                  \
+                                          ##__VA_ARGS__);                      \
+            if (_mrkl4c_nwritten < 0) {                                        \
+                bytestream_rewind(&_mrkl4c_ctx->bs);                           \
+            } else {                                                           \
+                SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
+                (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
+                if (SEOD(&_mrkl4c_ctx->bs) >= _mrkl4c_ctx->bsbufsz) {          \
+                    _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                    \
+                }                                                              \
+            }                                                                  \
+        }                                                                      \
+    } while (0)                                                                \
+
+
+#define MRKL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT(                                 \
+        ld, level, context, mod, msg, ...)                                     \
+    do {                                                                       \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
+            ssize_t _mrkl4c_nwritten;                                          \
+            assert(_mrkl4c_ctx->writer.write != NULL);                         \
+            _mrkl4c_ctx->writer.data.file.curtm = mrkl4c_now_posix();          \
+            _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,            \
+                                          _mrkl4c_ctx->bsbufsz,                \
+                                          "%.06lf [%d] %s %s: "                \
+                                          context                              \
+                                          mod ## _ ## msg ## _FMT,             \
+                                          _mrkl4c_ctx->                        \
+                                            writer.data.file.curtm,            \
+                                          _mrkl4c_ctx->cache.pid,              \
+                                          mod ## _NAME,                        \
+                                          level_names[level],                  \
+                                          ##__VA_ARGS__);                      \
+            if (_mrkl4c_nwritten < 0) {                                        \
+                bytestream_rewind(&_mrkl4c_ctx->bs);                           \
+            } else {                                                           \
+                SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
+                (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
+                if (SEOD(&_mrkl4c_ctx->bs) >= _mrkl4c_ctx->bsbufsz) {          \
+                    _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                    \
+                }                                                              \
+            }                                                                  \
+        }                                                                      \
+    } while (0)                                                                \
+
 
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE(ld, level, mod, msg, ...)                 \
     do {                                                                       \
@@ -130,7 +195,6 @@ UNUSED static const char *level_names[] = {
                 SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
-                _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -162,7 +226,6 @@ UNUSED static const char *level_names[] = {
                 SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
-                _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -201,7 +264,6 @@ UNUSED static const char *level_names[] = {
                 SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
-                _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -242,7 +304,6 @@ UNUSED static const char *level_names[] = {
                 SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
-                _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -282,7 +343,6 @@ UNUSED static const char *level_names[] = {
                 SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
-                _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -324,7 +384,6 @@ UNUSED static const char *level_names[] = {
                 SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
-                _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -517,7 +576,6 @@ UNUSED static const char *level_names[] = {
                                          ##__VA_ARGS__);                       \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
-                _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -537,7 +595,6 @@ UNUSED static const char *level_names[] = {
                                          ##__VA_ARGS__);                       \
                 (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
                 _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
-                _mrkl4c_ctx->writer.data.file.cursz += _mrkl4c_nwritten;       \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \

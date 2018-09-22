@@ -27,6 +27,10 @@ BAR "BAR"
     LOG_INFO QWE "Bar 0: Number %d, price %f name %s"
     LOG_DEBUG ASD1 " %s"
 
+TD "TDebug"
+    LOG_DEBUG WER "Counter: %d"
+
+
 #context LZERO
 #context-format "%d %s:"
 #context-args _my_number, BDATA(&_lz)

@@ -261,18 +261,20 @@ writer_file_check_rollover(mrkl4c_writer_t *writer)
 {
     int res;
 
-    res = 0;
     //TRACE("curtm=%lf starttm=%lf maxtm=%lf, cursz=%ld maxsz=%ld",
     //      writer->data.file.curtm,
     //      writer->data.file.starttm,
     //      writer->data.file.maxtm,
     //      writer->data.file.cursz,
     //      writer->data.file.maxsz);
+
+    res = 0;
     if (((writer->data.file.maxtm > 0.0) &&
          (writer->data.file.curtm - writer->data.file.starttm) >
         writer->data.file.maxtm) ||
         ((writer->data.file.maxsz > 0) &&
          (writer->data.file.cursz > writer->data.file.maxsz))) {
+
         if (writer->data.file.fd >= 0) {
             close(writer->data.file.fd);
             writer->data.file.fd = -1;
@@ -313,10 +315,12 @@ writer_file_open(mrkl4c_writer_t *writer)
         if (writer_file_new_shadow(writer) != 0) {
             TRRET(WRITER_FILE_OPEN + 1);
         }
+
         if (lstat((char *)BDATA(writer->data.file.path), &sb) != 0) {
             TRRET(WRITER_FILE_OPEN + 2);
         }
     }
+
     if (!S_ISLNK(sb.st_mode)) {
         if (unlink((char *)BDATA(writer->data.file.path)) != 0) {
             TRRET(WRITER_FILE_OPEN + 3);
@@ -324,6 +328,7 @@ writer_file_open(mrkl4c_writer_t *writer)
         if (writer_file_new_shadow(writer) != 0) {
             TRRET(WRITER_FILE_OPEN + 4);
         }
+
     } else {
         char buf[PATH_MAX];
         ssize_t nread;
@@ -334,22 +339,27 @@ writer_file_open(mrkl4c_writer_t *writer)
                              sizeof(buf))) < 0) {
             TRRET(WRITER_FILE_OPEN + 5);
         }
+
         buf[nread] = '\0';
         BYTES_DECREF(&writer->data.file.shadow_path);
         writer->data.file.shadow_path = bytes_new_from_str(buf);
+
         if (lstat((char *)BDATA(writer->data.file.shadow_path),
             &writer->data.file.sb) != 0) {
             if (writer_file_new_shadow(writer) != 0) {
                 TRRET(WRITER_FILE_OPEN + 6);
             }
         }
+
         writer->data.file.cursz = writer->data.file.sb.st_size;
+
 #ifdef HAVE_ST_BIRTHTIM
         writer->data.file.starttm = writer->data.file.sb.st_birthtim.tv_sec;
 #else
         writer->data.file.starttm = writer->data.file.sb.st_ctime;
 #endif
     }
+
     /*
      * At this point, shadow_path, path, and sb are consistent.
      */
@@ -360,20 +370,29 @@ writer_file_open(mrkl4c_writer_t *writer)
 static void
 mrkl4c_write_file(mrkl4c_ctx_t *ctx)
 {
+    ssize_t nwritten;
+
     //TRACE("cursz=%ld starttm=%lf curtm=%lf",
     //      ctx->writer.data.file.cursz,
     //      ctx->writer.data.file.starttm,
     //      ctx->writer.data.file.curtm);
+
+    //assert(ctx->writer.data.file.fd >= 0);
+    if (MRKUNLIKELY(
+        (nwritten = write(ctx->writer.data.file.fd,
+                          SDATA(&ctx->bs, 0),
+                          SEOD(&ctx->bs))) <= 0)) {
+        TRACE("write failed");
+
+    } else {
+        ctx->writer.data.file.cursz += nwritten;
+    }
+
+    bytestream_rewind(&ctx->bs);
+
     if (writer_file_check_rollover(&ctx->writer) != 0) {
         TRACE("failed to roll over");
     }
-    //assert(ctx->writer.data.file.fd >= 0);
-    if (write(ctx->writer.data.file.fd,
-              SDATA(&ctx->bs, 0),
-              SEOD(&ctx->bs)) <= 0) {
-        TRACE("write failed");
-    }
-    bytestream_rewind(&ctx->bs);
 }
 
 
@@ -469,6 +488,7 @@ mrkl4c_set_bufsz(mrkl4c_logger_t ld, ssize_t sz)
     }
     bytestream_fini(&(*pctx)->bs);
     bytestream_init(&(*pctx)->bs, sz);
+    (*pctx)->bsbufsz = sz;
     return 0;
 }
 
@@ -699,13 +719,20 @@ mrkl4c_close(mrkl4c_logger_t ld)
         res = -1;
         goto end;
     }
+
     if (*pctx == NULL) {
         res = -1;
         goto end;
     }
+
     res = 0;
     --(*pctx)->nref;
+
     if ((*pctx)->nref <= 0) {
+        if (SEOD(&(*pctx)->bs) > 0) {
+            assert((*pctx)->writer.write != NULL);
+            (*pctx)->writer.write(*pctx);
+        }
         array_clear_item(&ctxes, ld);
     }
 

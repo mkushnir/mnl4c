@@ -437,8 +437,8 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
     }
 
     fprintf(params->fhout,
-        "#define %s_LOG(logger, level, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_CONTEXT_LOG(logger, level, context, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG(logger, level, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LOG(logger, level, context, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_LT(logger, level, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LOG_LT(logger, level, context, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE_LT_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_START(logger, level, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
@@ -458,7 +458,7 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
         "#define %s_CONTEXT_LINFO(logger, context, msg, ...) %s_CONTEXT_LOG_LT(logger, LOG_INFO, context, msg, ##__VA_ARGS__)\n"
         "#define %s_LDEBUG(logger, msg, ...) %s_LOG(logger, LOG_DEBUG, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LDEBUG(logger, context, msg, ...) %s_CONTEXT_LOG(logger, LOG_DEBUG, context, msg, ##__VA_ARGS__)\n"
-        "#define %s_LREG(logger, level, msg) mrkl4c_register_msg(logger, level, %s_ ## msg ## _ID, \"%s\" \"_\" #msg)\n"
+        "#define %s_LREG(logger, level, msg) mrkl4c_register_msg(logger, level, %s_ ## msg ## _ID, \"%s_\" #msg)\n"
         "#define %s_NAME %s\n"
         "#define %s_PREFIX _MRKL4C_TSPIDMOD_FMT\n"
         "#define %s_ARGS _MRKL4C_TSPIDMOD_ARGS(%s)\n",

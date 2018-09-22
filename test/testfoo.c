@@ -1,7 +1,7 @@
 #include <assert.h>
+#include <time.h>
 
 #include <mrkcommon/dumpm.h>
-
 #include <mrkl4c.h>
 
 #include "unittest.h"
@@ -17,6 +17,7 @@ static mnbytes_t _lz = BYTES_INITIALIZER("L0");
 
 #define LZERO_FOO_LERROR(msg, ...) FOO_CONTEXT_LERROR(logger0, FRED("%d %s: "), msg, _my_number, BDATA(&_lz), ##__VA_ARGS__)
 #define LZERO_FOO_LINFO(msg, ...) FOO_CONTEXT_LINFO(logger0, FGREEN("%d %s: "), msg, _my_number, BDATA(&_lz), ##__VA_ARGS__)
+#define LZERO_TD_LDEBUG(msg, ...) TD_CONTEXT_LDEBUG(logger1, FBLUE("%d %s: "), msg, _my_number, BDATA(&_lz), ##__VA_ARGS__)
 
 static void
 test0(void)
@@ -45,6 +46,7 @@ test0(void)
     foo_init_logdef(logger0);
     logger1 = mrkl4c_open(MRKL4C_OPEN_FILE, "/tmp/mrkl4c-testfoo.log", 4096, 20.0, 10, 0);
     assert(logger1 != -1);
+    (void)mrkl4c_set_bufsz(logger1, 256);
     foo_init_logdef(logger1);
 
     FOO_LERROR(logger0, QWE, 1, 2.0, "qwe123123123123123123123");
@@ -83,6 +85,11 @@ test0(void)
     }
     BAR_LOG_STOP(logger1, LOG_DEBUG, ASD1, " Stop.");
 
+    for (i = 0; i < 120; ++i) {
+        TD_LINFO(logger0, WER, i);
+        LZERO_TD_LDEBUG(WER, i);
+        sleep(1);
+    }
 
     (void)mrkl4c_close(logger0);
     (void)mrkl4c_close(logger1);
