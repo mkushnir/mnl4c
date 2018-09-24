@@ -22,7 +22,7 @@ static mnbytes_t _lz = BYTES_INITIALIZER("L0");
 static void
 test0(void)
 {
-    int res;
+    UNUSED int res;
     mrkl4c_logger_t logger0;
     mrkl4c_logger_t logger1;
     struct {

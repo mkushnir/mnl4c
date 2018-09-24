@@ -240,7 +240,7 @@ process_logdef(const char *fname)
     ssize_t nread;
     int state = PROCESS_LOGDEF_STATE_MODULE;
     l4cgen_module_t *current_mod, probe_mod;
-    l4cgen_message_t *current_msg;
+    UNUSED l4cgen_message_t *current_msg;
     mnhash_item_t *hit;
 
     if ((fp = fopen(fname, "r")) == NULL) {
