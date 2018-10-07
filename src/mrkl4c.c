@@ -532,12 +532,21 @@ mrkl4c_set_level(mrkl4c_logger_t ld, int level, mnbytes_t *prefix)
     }
 
     res = 0;
-    for (minfo = array_first(&(*pctx)->minfos, &it);
-         minfo != NULL;
-         minfo = array_next(&(*pctx)->minfos, &it)) {
-        if (bytes_startswith(minfo->name, prefix)) {
+    if (prefix == NULL) {
+        for (minfo = array_first(&(*pctx)->minfos, &it);
+             minfo != NULL;
+             minfo = array_next(&(*pctx)->minfos, &it)) {
             minfo->level = level;
             ++res;
+        }
+    } else {
+        for (minfo = array_first(&(*pctx)->minfos, &it);
+             minfo != NULL;
+             minfo = array_next(&(*pctx)->minfos, &it)) {
+            if (bytes_startswith(minfo->name, prefix)) {
+                minfo->level = level;
+                ++res;
+            }
         }
     }
     return res;
