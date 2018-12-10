@@ -346,8 +346,12 @@ writer_file_open(mrkl4c_writer_t *writer)
 
         if (lstat((char *)BDATA(writer->data.file.shadow_path),
             &writer->data.file.sb) != 0) {
-            if (writer_file_new_shadow(writer) != 0) {
+            if (unlink((char *)BDATA(writer->data.file.path)) != 0) {
                 TRRET(WRITER_FILE_OPEN + 6);
+            }
+
+            if (writer_file_new_shadow(writer) != 0) {
+                TRRET(WRITER_FILE_OPEN + 7);
             }
         }
 

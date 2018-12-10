@@ -18,19 +18,35 @@ EXTRA_DIST = diag.txt logdef.txt
 
 noinst_HEADERS = unittest.h ../src/mrkl4c.h
 
+DEBUG_LD_FLAGS =
 if DEBUG
-DEBUG_FLAGS = -g -O0 @CC_DEBUG@
+DEBUG_CC_FLAGS = -g -O0 @CC_DEBUG@
+DEBUG_LD_FLAGS += -no-install
 else
-DEBUG_FLAGS = -DNDEBUG -O3
+DEBUG_CC_FLAGS = -DNDEBUG -O3 -fomit-frame-pointer
+if LTO
+DEBUG_CC_FLAGS += @CC_LTO@
+DEBUG_LD_FLAGS += @LD_LTO@
+endif
+endif
+
+if ALLSTATIC
+testfoo_LDFLAGS = -all-static
+else
+testfoo_LDFLAGS =
 endif
 
 nodist_testfoo_SOURCES = diag.c my-logdef.c
 testfoo_SOURCES = testfoo.c
-testfoo_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ -I$(top_srcdir)/test -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
-testfoo_LDFLAGS = -L$(libdir) -lmrkcommon -L$(top_srcdir)/src/.libs -lmrkl4c -lmndiag
+if LTO
+testfoo_SOURCES += ../src/mrkl4c.c
+endif
+testfoo_CFLAGS = $(DEBUG_CC_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/test -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
+testfoo_LDFLAGS += -L$(libdir) -L$(top_srcdir)/src/.libs
+testfoo_LDADD = -lmrkl4c -lmrkcommon
 
 diag.c diag.h: $(diags)
-	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrkl4c -H diag.h -C diag.c ../*.[ch] ./*.[ch]
+	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrkl4c -H diag.h -C diag.c ../src/*.[ch] ./*.[ch]
 
 my-logdef.c my-logdef.h: logdef.txt
 	$(AM_V_GEN) ../src/l4cdefgen --lib foo --hout my-logdef.h --cout my-logdef.c logdef.txt
