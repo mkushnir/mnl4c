@@ -1,3 +1,8 @@
+#if __STDC_VERSION__ < 201212
+#   ifndef _WITH_GETLINE
+#       define _WITH_GETLINE
+#   endif
+#endif
 #include <assert.h>
 #include <err.h>
 #include <ctype.h>
