@@ -594,7 +594,7 @@ main(int argc, char *argv[static argc])
             break;
 
         case 'V':
-            printf("%s\n", VERSION);
+            printf("%s\n", PACKAGE_STRING);
             exit(0);
             break;
 
