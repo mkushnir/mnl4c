@@ -30,6 +30,8 @@ typedef struct _mrkl4c_minfo {
      */
     int level;
     mnbytes_t *name;
+    double throttle_threshold;
+    int nthrottled;
 } mrkl4c_minfo_t;
 
 
@@ -90,6 +92,7 @@ bool mrkl4c_ctx_allowed(mrkl4c_ctx_t *, int, int);
 int mrkl4c_close(mrkl4c_logger_t);
 void mrkl4c_register_msg(mrkl4c_logger_t, int, int, const char *);
 int mrkl4c_set_level(mrkl4c_logger_t, int, mnbytes_t *);
+int mrkl4c_set_throttling(mrkl4c_logger_t, double, mnbytes_t *);
 void mrkl4c_init(void);
 void mrkl4c_fini(void);
 
@@ -111,26 +114,41 @@ UNUSED static const char *level_names[] = {
         assert(_mrkl4c_ctx != NULL);                                           \
         if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
             ssize_t _mrkl4c_nwritten;                                          \
+            double _mrkl4c_curtm;                                              \
+            mrkl4c_minfo_t *_mrkl4c_minfo;                                     \
             assert(_mrkl4c_ctx->writer.write != NULL);                         \
-            _mrkl4c_ctx->writer.data.file.curtm = mrkl4c_now_posix();          \
-            _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,            \
-                                          _mrkl4c_ctx->bsbufsz,                \
-                                          "%.06lf [%d] %s %s: "                \
-                                          mod ## _ ## msg ## _FMT,             \
-                                          _mrkl4c_ctx->                        \
-                                            writer.data.file.curtm,            \
-                                          _mrkl4c_ctx->cache.pid,              \
-                                          mod ## _NAME,                        \
-                                          level_names[level],                  \
-                                          ##__VA_ARGS__);                      \
-            if (_mrkl4c_nwritten < 0) {                                        \
-                bytestream_rewind(&_mrkl4c_ctx->bs);                           \
-            } else {                                                           \
-                SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
-                (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
-                if (SEOD(&_mrkl4c_ctx->bs) >= _mrkl4c_ctx->bsbufsz) {          \
-                    _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                    \
+            _mrkl4c_curtm = mrkl4c_now_posix();                                \
+            _mrkl4c_minfo = ARRAY_GET(                                         \
+                mrkl4c_minfo_t,                                                \
+                &_mrkl4c_ctx->minfos,                                          \
+                mod ## _ ## msg ## _ID);                                       \
+            if (_mrkl4c_ctx->writer.data.file.curtm +                          \
+                    _mrkl4c_minfo->throttle_threshold <= _mrkl4c_curtm) {      \
+                _mrkl4c_ctx->writer.data.file.curtm = _mrkl4c_curtm;           \
+                _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,        \
+                                              _mrkl4c_ctx->bsbufsz,            \
+                                              "%.06lf [%d] %s %s[%d]: "        \
+                                              mod ## _ ## msg ## _FMT,         \
+                                              _mrkl4c_ctx->                    \
+                                                writer.data.file.curtm,        \
+                                              _mrkl4c_ctx->cache.pid,          \
+                                              mod ## _NAME,                    \
+                                              level_names[level],              \
+                                              _mrkl4c_minfo->                  \
+                                                nthrottled,                    \
+                                              ##__VA_ARGS__);                  \
+                if (_mrkl4c_nwritten < 0) {                                    \
+                    bytestream_rewind(&_mrkl4c_ctx->bs);                       \
+                } else {                                                       \
+                    SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                         \
+                    (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");           \
+                    if (SEOD(&_mrkl4c_ctx->bs) >= _mrkl4c_ctx->bsbufsz) {      \
+                        _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                \
+                    }                                                          \
                 }                                                              \
+                _mrkl4c_minfo->nthrottled = 0;                                 \
+            } else {                                                           \
+                ++_mrkl4c_minfo->nthrottled;                                   \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \
@@ -144,27 +162,43 @@ UNUSED static const char *level_names[] = {
         assert(_mrkl4c_ctx != NULL);                                           \
         if (mrkl4c_ctx_allowed(_mrkl4c_ctx, level, mod ## _ ## msg ## _ID)) {  \
             ssize_t _mrkl4c_nwritten;                                          \
+            double _mrkl4c_curtm;                                              \
+            mrkl4c_minfo_t *_mrkl4c_minfo;                                     \
             assert(_mrkl4c_ctx->writer.write != NULL);                         \
+            _mrkl4c_curtm = mrkl4c_now_posix();                                \
+            _mrkl4c_minfo = ARRAY_GET(                                         \
+                mrkl4c_minfo_t,                                                \
+                &_mrkl4c_ctx->minfos,                                          \
+                mod ## _ ## msg ## _ID);                                       \
             _mrkl4c_ctx->writer.data.file.curtm = mrkl4c_now_posix();          \
-            _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,            \
-                                          _mrkl4c_ctx->bsbufsz,                \
-                                          "%.06lf [%d] %s %s: "                \
-                                          context                              \
-                                          mod ## _ ## msg ## _FMT,             \
-                                          _mrkl4c_ctx->                        \
-                                            writer.data.file.curtm,            \
-                                          _mrkl4c_ctx->cache.pid,              \
-                                          mod ## _NAME,                        \
-                                          level_names[level],                  \
-                                          ##__VA_ARGS__);                      \
-            if (_mrkl4c_nwritten < 0) {                                        \
-                bytestream_rewind(&_mrkl4c_ctx->bs);                           \
-            } else {                                                           \
-                SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
-                (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
-                if (SEOD(&_mrkl4c_ctx->bs) >= _mrkl4c_ctx->bsbufsz) {          \
-                    _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                    \
+            if (_mrkl4c_ctx->writer.data.file.curtm +                          \
+                    _mrkl4c_minfo->throttle_threshold <= _mrkl4c_curtm) {      \
+                _mrkl4c_ctx->writer.data.file.curtm = _mrkl4c_curtm;           \
+                _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,        \
+                                              _mrkl4c_ctx->bsbufsz,            \
+                                              "%.06lf [%d] %s %s[%d]: "        \
+                                              context                          \
+                                              mod ## _ ## msg ## _FMT,         \
+                                              _mrkl4c_ctx->                    \
+                                                writer.data.file.curtm,        \
+                                              _mrkl4c_ctx->cache.pid,          \
+                                              mod ## _NAME,                    \
+                                              level_names[level],              \
+                                              _mrkl4c_minfo->                  \
+                                                nthrottled,                    \
+                                              ##__VA_ARGS__);                  \
+                if (_mrkl4c_nwritten < 0) {                                    \
+                    bytestream_rewind(&_mrkl4c_ctx->bs);                       \
+                } else {                                                       \
+                    SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                         \
+                    (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");           \
+                    if (SEOD(&_mrkl4c_ctx->bs) >= _mrkl4c_ctx->bsbufsz) {      \
+                        _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                \
+                    }                                                          \
                 }                                                              \
+                _mrkl4c_minfo->nthrottled = 0;                                 \
+            } else {                                                           \
+                ++_mrkl4c_minfo->nthrottled;                                   \
             }                                                                  \
         }                                                                      \
     } while (0)                                                                \

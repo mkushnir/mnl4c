@@ -419,6 +419,8 @@ static int
 minfo_init(mrkl4c_minfo_t *minfo)
 {
     minfo->name = NULL;
+    minfo->throttle_threshold = -1.0l;
+    minfo->nthrottled = 0;
     return 0;
 }
 
@@ -549,6 +551,40 @@ mrkl4c_set_level(mrkl4c_logger_t ld, int level, mnbytes_t *prefix)
              minfo = array_next(&(*pctx)->minfos, &it)) {
             if (bytes_startswith(minfo->name, prefix)) {
                 minfo->level = level;
+                ++res;
+            }
+        }
+    }
+    return res;
+}
+
+
+int
+mrkl4c_set_throttling(mrkl4c_logger_t ld, double threshold, mnbytes_t *prefix)
+{
+    mrkl4c_ctx_t **pctx;
+    mrkl4c_minfo_t *minfo;
+    mnarray_iter_t it;
+    int res;
+
+    if ((pctx = array_get(&ctxes, ld)) == NULL) {
+        FAIL("array_get");
+    }
+
+    res = 0;
+    if (prefix == NULL) {
+        for (minfo = array_first(&(*pctx)->minfos, &it);
+             minfo != NULL;
+             minfo = array_next(&(*pctx)->minfos, &it)) {
+            minfo->throttle_threshold = threshold;
+            ++res;
+        }
+    } else {
+        for (minfo = array_first(&(*pctx)->minfos, &it);
+             minfo != NULL;
+             minfo = array_next(&(*pctx)->minfos, &it)) {
+            if (bytes_startswith(minfo->name, prefix)) {
+                minfo->throttle_threshold = threshold;
                 ++res;
             }
         }
@@ -746,7 +782,7 @@ mrkl4c_close(mrkl4c_logger_t ld)
             assert((*pctx)->writer.write != NULL);
             (*pctx)->writer.write(*pctx);
         }
-        array_clear_item(&ctxes, ld);
+        (void)array_clear_item(&ctxes, ld);
     }
 
 end:

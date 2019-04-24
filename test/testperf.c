@@ -72,6 +72,7 @@ main(int argc, UNUSED char *argv[static argc])
     (void)mrkl4c_set_bufsz(logger, 1024*1024*4);
     foo_init_logdef(logger);
     (void)mrkl4c_set_level(logger, LOG_DEBUG, _foo);
+    (void)mrkl4c_set_throttling(logger, 0.1, _foo);
 
     n = 2230;
     while (n--) {
