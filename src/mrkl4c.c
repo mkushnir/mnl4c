@@ -157,7 +157,7 @@ writer_file_cleanup_shadows(mrkl4c_writer_t *writer)
                0,
                NULL,
                (array_finalizer_t)_writer_file_cleanup_shadows_fini_item);
-    if (traverse_dir(dirname((char *)BDATA(tmp)),
+    if (traverse_dir(dirname(BCDATA(tmp)),
                      _writer_file_cleanup_shadows_cb,
                      &params) != 0) {
         TRACE("traverse_dir() failed, could not cleanup shadows");
@@ -202,7 +202,7 @@ writer_file_new_shadow(mrkl4c_writer_t *writer)
                      (unsigned long)writer->data.file.starttm);
 
     oflags = MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS;
-    if ((fd = open((char *)BDATA(writer->data.file.shadow_path),
+    if ((fd = open(BCDATA(writer->data.file.shadow_path),
                      oflags,
                      MRKL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
         TRRET(WRITER_FILE_NEW_SHADOW + 1);
@@ -214,11 +214,11 @@ writer_file_new_shadow(mrkl4c_writer_t *writer)
     }
     (void)close(fd);
     /* write symlink */
-    if (symlink((char *)BDATA(writer->data.file.shadow_path),
-                (char *)BDATA(writer->data.file.path)) != 0) {
+    if (symlink(BCDATA(writer->data.file.shadow_path),
+                BCDATA(writer->data.file.path)) != 0) {
         TRRET(WRITER_FILE_NEW_SHADOW + 3);
     }
-    if (lstat((char *)BDATA(writer->data.file.shadow_path),
+    if (lstat(BCDATA(writer->data.file.shadow_path),
               &writer->data.file.sb) != 0) {
         TRRET(WRITER_FILE_NEW_SHADOW + 4);
     }
@@ -241,7 +241,7 @@ static int _writer_file_open(mrkl4c_writer_t *writer)
 
     oflags = MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS;
     if ((writer->data.file.fd =
-                open((char *)BDATA(writer->data.file.path),
+                open(BCDATA(writer->data.file.path),
                      oflags,
                      MRKL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
         TRRET(_WRITER_FILE_OPEN + 1);
@@ -278,7 +278,7 @@ writer_file_check_rollover(mrkl4c_writer_t *writer)
         if (writer->data.file.fd >= 0) {
             close(writer->data.file.fd);
             writer->data.file.fd = -1;
-            if (unlink((char *)BDATA(writer->data.file.path)) != 0) {
+            if (unlink(BCDATA(writer->data.file.path)) != 0) {
                 TRRET(WRITER_FILE_OPEN + 2);
             }
             BYTES_DECREF(&writer->data.file.shadow_path);
@@ -311,18 +311,18 @@ writer_file_open(mrkl4c_writer_t *writer)
      */
     memset(&sb, '\0', sizeof(struct stat));
 
-    if (lstat((char *)BDATA(writer->data.file.path), &sb) != 0) {
+    if (lstat(BCDATA(writer->data.file.path), &sb) != 0) {
         if (writer_file_new_shadow(writer) != 0) {
             TRRET(WRITER_FILE_OPEN + 1);
         }
 
-        if (lstat((char *)BDATA(writer->data.file.path), &sb) != 0) {
+        if (lstat(BCDATA(writer->data.file.path), &sb) != 0) {
             TRRET(WRITER_FILE_OPEN + 2);
         }
     }
 
     if (!S_ISLNK(sb.st_mode)) {
-        if (unlink((char *)BDATA(writer->data.file.path)) != 0) {
+        if (unlink(BCDATA(writer->data.file.path)) != 0) {
             TRRET(WRITER_FILE_OPEN + 3);
         }
         if (writer_file_new_shadow(writer) != 0) {
@@ -334,7 +334,7 @@ writer_file_open(mrkl4c_writer_t *writer)
         ssize_t nread;
 
         /* read symlink */
-        if ((nread = readlink((char *)BDATA(writer->data.file.path),
+        if ((nread = readlink(BCDATA(writer->data.file.path),
                              buf,
                              sizeof(buf))) < 0) {
             TRRET(WRITER_FILE_OPEN + 5);
@@ -344,9 +344,9 @@ writer_file_open(mrkl4c_writer_t *writer)
         BYTES_DECREF(&writer->data.file.shadow_path);
         writer->data.file.shadow_path = bytes_new_from_str(buf);
 
-        if (lstat((char *)BDATA(writer->data.file.shadow_path),
+        if (lstat(BCDATA(writer->data.file.shadow_path),
             &writer->data.file.sb) != 0) {
-            if (unlink((char *)BDATA(writer->data.file.path)) != 0) {
+            if (unlink(BCDATA(writer->data.file.path)) != 0) {
                 TRRET(WRITER_FILE_OPEN + 6);
             }
 
@@ -518,7 +518,7 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
         minfo->name = bytes_new_from_str(name);
         BYTES_INCREF(minfo->name);
     } else {
-        if (strcmp(name, (char *)BDATA(minfo->name)) != 0) {
+        if (strcmp(name, BCDATA(minfo->name)) != 0) {
             FAIL("mrkl4c_register_msg");
         }
     }
@@ -644,7 +644,7 @@ mrkl4c_open(unsigned ty, ...)
             if ((*pctx)->ty == ty) {
                 if (fpath != NULL) {
                     if (strcmp(fpath,
-                               (char *)BDATA((*pctx)->
+                               BCDATA((*pctx)->
                                 writer.data.file.path)) == 0) {
                         break;
                     } else {

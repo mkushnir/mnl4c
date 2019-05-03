@@ -89,7 +89,7 @@ macroname_translate(mnbytes_t *s)
     size_t i;
 
     for (i = 0; i < (BSZ(s) - 1); ++i) {
-        char c = *(BDATA(s) + i);
+        char c = *(BCDATA(s) + i);
         if (isalpha(c)) {
             if (islower(c)) {
                 c = toupper(c);
