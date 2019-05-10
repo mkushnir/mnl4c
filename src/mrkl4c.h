@@ -85,6 +85,17 @@ double mrkl4c_now_posix(void);
 
 
 mrkl4c_logger_t mrkl4c_open(unsigned, ...);
+
+#define MRKL4C_OPEN_FROM_FILE(path, maxsz, maxtm, maxbkp, flags)       \
+mrkl4c_open(                                                           \
+    MRKL4C_OPEN_FILE,                                                  \
+    MNTYPECHK(char *, (path)),                                         \
+    MNTYPECHK(size_t, (maxsz)),                                        \
+    MNTYPECHK(double, (maxtm)),                                        \
+    MNTYPECHK(size_t, (maxbkp)),                                       \
+    MNTYPECHK(int, (flags)))                                           \
+
+
 int mrkl4c_set_bufsz(mrkl4c_logger_t, ssize_t);
 mrkl4c_logger_t mrkl4c_incref(mrkl4c_logger_t);
 mrkl4c_ctx_t *mrkl4c_get_ctx(mrkl4c_logger_t);
