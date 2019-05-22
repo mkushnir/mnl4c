@@ -514,14 +514,8 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
     }
     minfo->id = id;
     minfo->level = level;
-    if (minfo->name == NULL) {
-        minfo->name = bytes_new_from_str(name);
-        BYTES_INCREF(minfo->name);
-    } else {
-        if (strcmp(name, BCDATA(minfo->name)) != 0) {
-            FAIL("mrkl4c_register_msg");
-        }
-    }
+    minfo->name = bytes_new_from_str(name);
+    BYTES_INCREF(minfo->name);
 }
 
 

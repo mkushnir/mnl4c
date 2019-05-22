@@ -454,7 +454,7 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
         "#define %s_LOG_CONTEXT_NEXT(logger, level, context, msg, fmt, ...) MRKL4C_WRITE_NEXT_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, fmt, ##__VA_ARGS__)\n"
         "#define %s_LOG_STOP(logger, level, msg, ...) MRKL4C_WRITE_STOP_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_CONTEXT_STOP(logger, level, context, msg, ...) MRKL4C_WRITE_STOP_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG_ALLOWED_AT(logger, level, msg, __a1) MRKL4C_ALLOWED_AT(logger, level, %s, msg, __a1)\n"
+        "#define %s_DO_AT(logger, level, msg, __a1) MRKL4C_DO_AT(logger, level, %s, msg, __a1)\n"
         "#define %s_LERROR(logger, msg, ...) %s_LOG_LT(logger, LOG_ERR, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LERROR(logger, context, msg, ...) %s_CONTEXT_LOG_LT(logger, LOG_ERR, context, msg, ##__VA_ARGS__)\n"
         "#define %s_LWARNING(logger, msg, ...) %s_LOG_LT(logger, LOG_WARNING, msg, ##__VA_ARGS__)\n"
