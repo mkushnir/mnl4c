@@ -442,6 +442,8 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
     }
 
     fprintf(params->fhout,
+        "#define %s_LLOG(logger, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE_FLEVEL(logger, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LLOG(logger, context, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT_FLEVEL(logger, context, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG(logger, level, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LOG(logger, level, context, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_LT(logger, level, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, %s, msg, ##__VA_ARGS__)\n"
@@ -467,6 +469,10 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
         "#define %s_NAME %s\n"
         "#define %s_PREFIX _MRKL4C_TSPIDMOD_FMT\n"
         "#define %s_ARGS _MRKL4C_TSPIDMOD_ARGS(%s)\n",
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+        BDATA(mod->mid),
         BDATA(mod->mid),
         BDATA(mod->mid),
         BDATA(mod->mid),

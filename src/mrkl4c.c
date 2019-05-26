@@ -194,7 +194,6 @@ writer_file_new_shadow(mrkl4c_writer_t *writer)
     int fd;
 
     writer->data.file.starttm = mrkl4c_now_posix();
-    //writer->data.file.curtm = writer->data.file.starttm;
     BYTES_DECREF(&writer->data.file.shadow_path);
     writer->data.file.shadow_path =
         bytes_printf("%s.%ld",
@@ -480,7 +479,7 @@ mrkl4c_ctx_allowed(mrkl4c_ctx_t *ctx, int level, int id)
     }
     assert(minfo->id == id);
     assert(level >= 0 && (size_t)level < countof(level_names));
-    return minfo->level >= level;
+    return minfo->elevel >= level;
 }
 
 
@@ -513,7 +512,8 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
         FAIL("array_get_safe");
     }
     minfo->id = id;
-    minfo->level = level;
+    minfo->flevel = level;
+    minfo->elevel = level;
     minfo->name = bytes_new_from_str(name);
     BYTES_INCREF(minfo->name);
 }
@@ -536,7 +536,7 @@ mrkl4c_set_level(mrkl4c_logger_t ld, int level, mnbytes_t *prefix)
         for (minfo = array_first(&(*pctx)->minfos, &it);
              minfo != NULL;
              minfo = array_next(&(*pctx)->minfos, &it)) {
-            minfo->level = level;
+            minfo->elevel = level;
             ++res;
         }
     } else {
@@ -544,7 +544,7 @@ mrkl4c_set_level(mrkl4c_logger_t ld, int level, mnbytes_t *prefix)
              minfo != NULL;
              minfo = array_next(&(*pctx)->minfos, &it)) {
             if (bytes_startswith(minfo->name, prefix)) {
-                minfo->level = level;
+                minfo->elevel = level;
                 ++res;
             }
         }
@@ -676,10 +676,12 @@ mrkl4c_open(unsigned ty, ...)
         switch (ty & MRKL4C_OPEN_TY) {
         case MRKL4C_OPEN_STDOUT:
             (*pctx)->writer.write = mrkl4c_write_stdout;
+            (*pctx)->writer.data.file.curtm = mrkl4c_now_posix();
             break;
 
         case MRKL4C_OPEN_STDERR:
             (*pctx)->writer.write = mrkl4c_write_stderr;
+            (*pctx)->writer.data.file.curtm = mrkl4c_now_posix();
             break;
 
         case MRKL4C_OPEN_FILE:
@@ -746,6 +748,24 @@ mrkl4c_incref(mrkl4c_logger_t ld)
     }
     res = ld;
     ++(*pctx)->nref;
+
+end:
+    return res;
+}
+
+
+int
+mrkl4c_traverse_minfos(mrkl4c_logger_t ld, array_traverser_t cb, void *udata)
+{
+    int res = 0;
+    mrkl4c_ctx_t *ctx;
+
+    if ((ctx = mrkl4c_get_ctx(ld)) == NULL) {
+        res = TRAVERSE_MINFOS + 1;
+        goto end;
+    }
+
+    res = array_traverse(&ctx->minfos, cb, udata);
 
 end:
     return res;

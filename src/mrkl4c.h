@@ -28,7 +28,8 @@ typedef struct _mrkl4c_minfo {
     /*
      * LOG_*
      */
-    int level;
+    int flevel;
+    int elevel;
     mnbytes_t *name;
     double throttle_threshold;
     int nthrottled;
@@ -99,6 +100,7 @@ mrkl4c_open(                                                           \
 int mrkl4c_set_bufsz(mrkl4c_logger_t, ssize_t);
 mrkl4c_logger_t mrkl4c_incref(mrkl4c_logger_t);
 mrkl4c_ctx_t *mrkl4c_get_ctx(mrkl4c_logger_t);
+int mrkl4c_traverse_minfos(mrkl4c_logger_t, array_traverser_t, void *);
 bool mrkl4c_ctx_allowed(mrkl4c_ctx_t *, int, int);
 int mrkl4c_close(mrkl4c_logger_t);
 void mrkl4c_register_msg(mrkl4c_logger_t, int, int, const char *);
@@ -118,6 +120,117 @@ UNUSED static const char *level_names[] = {
     "DEBUG",
 };
 
+
+/*
+ * may be flevel
+ */
+#define MRKL4C_WRITE_MAYBE_PRINTFLIKE_FLEVEL(ld, mod, msg, ...)                        \
+    do {                                                                               \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                                     \
+        mrkl4c_minfo_t *_mrkl4c_minfo;                                                 \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                              \
+        assert(_mrkl4c_ctx != NULL);                                                   \
+        _mrkl4c_minfo = ARRAY_GET(                                                     \
+            mrkl4c_minfo_t,                                                            \
+            &_mrkl4c_ctx->minfos,                                                      \
+            mod ## _ ## msg ## _ID);                                                   \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx,                                            \
+                               _mrkl4c_minfo->flevel,                                  \
+                               mod ## _ ## msg ## _ID)) {                              \
+            ssize_t _mrkl4c_nwritten;                                                  \
+            double _mrkl4c_curtm;                                                      \
+            assert(_mrkl4c_ctx->writer.write != NULL);                                 \
+            _mrkl4c_curtm = mrkl4c_now_posix();                                        \
+            if (_mrkl4c_ctx->writer.data.file.curtm +                                  \
+                    _mrkl4c_minfo->throttle_threshold <= _mrkl4c_curtm) {              \
+                _mrkl4c_ctx->writer.data.file.curtm = _mrkl4c_curtm;                   \
+                _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,                \
+                                              _mrkl4c_ctx->bsbufsz,                    \
+                                              "%.06lf [%d] %s %s[%d]: "                \
+                                              mod ## _ ## msg ## _FMT,                 \
+                                              _mrkl4c_ctx->                            \
+                                                writer.data.file.curtm,                \
+                                              _mrkl4c_ctx->cache.pid,                  \
+                                              mod ## _NAME,                            \
+                                              level_names[_mrkl4c_minfo->flevel],      \
+                                              _mrkl4c_minfo->                          \
+                                                nthrottled,                            \
+                                              ##__VA_ARGS__);                          \
+                if (_mrkl4c_nwritten < 0) {                                            \
+                    bytestream_rewind(&_mrkl4c_ctx->bs);                               \
+                } else {                                                               \
+                    SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                                 \
+                    (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");                   \
+                    if (SEOD(&_mrkl4c_ctx->bs) >= _mrkl4c_ctx->bsbufsz) {              \
+                        _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
+                    }                                                                  \
+                }                                                                      \
+                _mrkl4c_minfo->nthrottled = 0;                                         \
+            } else {                                                                   \
+                ++_mrkl4c_minfo->nthrottled;                                           \
+            }                                                                          \
+        }                                                                              \
+    } while (0)                                                                        \
+
+
+/*
+ * may be context flevel
+ */
+#define MRKL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT_FLEVEL(                                  \
+        ld, context, mod, msg, ...)                                                    \
+    do {                                                                               \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                                     \
+        mrkl4c_minfo_t *_mrkl4c_minfo;                                                 \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                              \
+        assert(_mrkl4c_ctx != NULL);                                                   \
+        _mrkl4c_minfo = ARRAY_GET(                                                     \
+            mrkl4c_minfo_t,                                                            \
+            &_mrkl4c_ctx->minfos,                                                      \
+            mod ## _ ## msg ## _ID);                                                   \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx,                                            \
+                               _mrkl4c_minfo->flevel,                                  \
+                               mod ## _ ## msg ## _ID)) {                              \
+            ssize_t _mrkl4c_nwritten;                                                  \
+            double _mrkl4c_curtm;                                                      \
+            assert(_mrkl4c_ctx->writer.write != NULL);                                 \
+            _mrkl4c_curtm = mrkl4c_now_posix();                                        \
+            _mrkl4c_ctx->writer.data.file.curtm = mrkl4c_now_posix();                  \
+            if (_mrkl4c_ctx->writer.data.file.curtm +                                  \
+                    _mrkl4c_minfo->throttle_threshold <= _mrkl4c_curtm) {              \
+                _mrkl4c_ctx->writer.data.file.curtm = _mrkl4c_curtm;                   \
+                _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,                \
+                                              _mrkl4c_ctx->bsbufsz,                    \
+                                              "%.06lf [%d] %s %s[%d]: "                \
+                                              context                                  \
+                                              mod ## _ ## msg ## _FMT,                 \
+                                              _mrkl4c_ctx->                            \
+                                                writer.data.file.curtm,                \
+                                              _mrkl4c_ctx->cache.pid,                  \
+                                              mod ## _NAME,                            \
+                                              level_names[_mrkl4c_minfo->flevel],      \
+                                              _mrkl4c_minfo->                          \
+                                                nthrottled,                            \
+                                              ##__VA_ARGS__);                          \
+                if (_mrkl4c_nwritten < 0) {                                            \
+                    bytestream_rewind(&_mrkl4c_ctx->bs);                               \
+                } else {                                                               \
+                    SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                                 \
+                    (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");                   \
+                    if (SEOD(&_mrkl4c_ctx->bs) >= _mrkl4c_ctx->bsbufsz) {              \
+                        _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
+                    }                                                                  \
+                }                                                                      \
+                _mrkl4c_minfo->nthrottled = 0;                                         \
+            } else {                                                                   \
+                ++_mrkl4c_minfo->nthrottled;                                           \
+            }                                                                          \
+        }                                                                              \
+    } while (0)                                                                        \
+
+
+/*
+ * may be
+ */
 #define MRKL4C_WRITE_MAYBE_PRINTFLIKE(ld, level, mod, msg, ...)                \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -165,6 +278,9 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+/*
+ * may be context
+ */
 #define MRKL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT(                                 \
         ld, level, context, mod, msg, ...)                                     \
     do {                                                                       \
@@ -215,6 +331,90 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+/*
+ * once flevel
+ */
+#define MRKL4C_WRITE_ONCE_PRINTFLIKE_FLEVEL(ld, mod, msg, ...)                 \
+    do {                                                                       \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        mrkl4c_minfo_t *_mrkl4c_minfo;                                         \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        _mrkl4c_minfo = ARRAY_GET(                                             \
+            mrkl4c_minfo_t,                                                    \
+            &_mrkl4c_ctx->minfos,                                              \
+            mod ## _ ## msg ## _ID);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx,                                    \
+                               _mrkl4c_minfo->flevel,                          \
+                               mod ## _ ## msg ## _ID)) {                      \
+            ssize_t _mrkl4c_nwritten;                                          \
+            assert(_mrkl4c_ctx->writer.write != NULL);                         \
+            _mrkl4c_ctx->writer.data.file.curtm = mrkl4c_now_posix();          \
+            _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,            \
+                                          _mrkl4c_ctx->bsbufsz,                \
+                                          "%.06lf [%d] %s %s: "                \
+                                          mod ## _ ## msg ## _FMT,             \
+                                          _mrkl4c_ctx->                        \
+                                            writer.data.file.curtm,            \
+                                          _mrkl4c_ctx->cache.pid,              \
+                                          mod ## _NAME,                        \
+                                          level_names[_mrkl4c_minfo->flevel],  \
+                                          ##__VA_ARGS__);                      \
+            if (_mrkl4c_nwritten < 0) {                                        \
+                bytestream_rewind(&_mrkl4c_ctx->bs);                           \
+            } else {                                                           \
+                SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
+                (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
+                _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
+            }                                                                  \
+        }                                                                      \
+    } while (0)                                                                \
+
+
+/*
+ * once context flevel
+ */
+#define MRKL4C_WRITE_ONCE_PRINTFLIKE_CONTEXT_FLEVEL(ld, context, mod, msg, ...)\
+    do {                                                                       \
+        mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
+        mrkl4c_minfo_t *_mrkl4c_minfo;                                         \
+        _mrkl4c_ctx = mrkl4c_get_ctx(ld);                                      \
+        assert(_mrkl4c_ctx != NULL);                                           \
+        _mrkl4c_minfo = ARRAY_GET(                                             \
+            mrkl4c_minfo_t,                                                    \
+            &_mrkl4c_ctx->minfos,                                              \
+            mod ## _ ## msg ## _ID);                                           \
+        if (mrkl4c_ctx_allowed(_mrkl4c_ctx,                                    \
+                               _mrklc3_minfo->flevel,                          \
+                               mod ## _ ## msg ## _ID)) {                      \
+            ssize_t _mrkl4c_nwritten;                                          \
+            assert(_mrkl4c_ctx->writer.write != NULL);                         \
+            _mrkl4c_ctx->writer.data.file.curtm = mrkl4c_now_posix();          \
+            _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,            \
+                                          _mrkl4c_ctx->bsbufsz,                \
+                                          "%.06lf [%d] %s %s: "                \
+                                          context                              \
+                                          mod ## _ ## msg ## _FMT,             \
+                                          _mrkl4c_ctx->                        \
+                                            writer.data.file.curtm,            \
+                                          _mrkl4c_ctx->cache.pid,              \
+                                          mod ## _NAME,                        \
+                                          level_names[_mrkl4c_minfo->flevel],  \
+                                          ##__VA_ARGS__);                      \
+            if (_mrkl4c_nwritten < 0) {                                        \
+                bytestream_rewind(&_mrkl4c_ctx->bs);                           \
+            } else {                                                           \
+                SADVANCEPOS(&_mrkl4c_ctx->bs, -1);                             \
+                (void)bytestream_cat(&_mrkl4c_ctx->bs, 1, "\n");               \
+                _mrkl4c_ctx->writer.write(_mrkl4c_ctx);                        \
+            }                                                                  \
+        }                                                                      \
+    } while (0)                                                                \
+
+
+/*
+ * once
+ */
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE(ld, level, mod, msg, ...)                 \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -245,6 +445,9 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+/*
+ * once context
+ */
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE_CONTEXT(ld, level, context, mod, msg, ...)\
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -276,6 +479,9 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+/*
+ * once lt
+ */
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(ld, level, mod, msg, ...)              \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -314,6 +520,9 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+/*
+ * once lt context
+ */
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE_LT_CONTEXT(                               \
         ld, level, context, mod, msg, ...)                                     \
     do {                                                                       \
@@ -354,6 +563,9 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+/*
+ * once lt2
+ */
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE_LT2(ld, level, mod, msg, ...)             \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -393,6 +605,9 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+/*
+ * once lt2 context
+ */
 #define MRKL4C_WRITE_ONCE_PRINTFLIKE_LT2_CONTEXT(                              \
         ld, level, context, mod, msg, ...)                                     \
     do {                                                                       \
@@ -434,6 +649,9 @@ UNUSED static const char *level_names[] = {
     } while (0)                                                                \
 
 
+/*
+ * start
+ */
 #define MRKL4C_WRITE_START_PRINTFLIKE(ld, level, mod, msg, ...)                \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -454,6 +672,9 @@ UNUSED static const char *level_names[] = {
                                           ##__VA_ARGS__);                      \
 
 
+/*
+ * start context
+ */
 #define MRKL4C_WRITE_START_PRINTFLIKE_CONTEXT(                                 \
         ld, level, context, mod, msg, ...)                                     \
     do {                                                                       \
@@ -476,6 +697,9 @@ UNUSED static const char *level_names[] = {
                                           ##__VA_ARGS__);                      \
 
 
+/*
+ * start lt
+ */
 #define MRKL4C_WRITE_START_PRINTFLIKE_LT(ld, level, mod, msg, ...)             \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -504,6 +728,9 @@ UNUSED static const char *level_names[] = {
                                           ##__VA_ARGS__);                      \
 
 
+/*
+ * start lt context
+ */
 #define MRKL4C_WRITE_START_PRINTFLIKE_LT_CONTEXT(                              \
         ld, level, context, mod, msg, ...)                                     \
     do {                                                                       \
@@ -534,6 +761,9 @@ UNUSED static const char *level_names[] = {
                                           ##__VA_ARGS__);                      \
 
 
+/*
+ * start lt2
+ */
 #define MRKL4C_WRITE_START_PRINTFLIKE_LT2(ld, level, mod, msg, ...)            \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
@@ -563,6 +793,9 @@ UNUSED static const char *level_names[] = {
                                           ##__VA_ARGS__);                      \
 
 
+/*
+ * start lt2 context
+ */
 #define MRKL4C_WRITE_START_PRINTFLIKE_LT2_CONTEXT(                             \
         ld, level, context, mod, msg, ...)                                     \
     do {                                                                       \
@@ -594,6 +827,9 @@ UNUSED static const char *level_names[] = {
                                           ##__VA_ARGS__);                      \
 
 
+/*
+ * next
+ */
 #define MRKL4C_WRITE_NEXT_PRINTFLIKE(ld, level, mod, msg, fmt, ...)    \
             _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,    \
                                      _mrkl4c_ctx->bsbufsz,             \
@@ -601,6 +837,9 @@ UNUSED static const char *level_names[] = {
                                      ##__VA_ARGS__)                    \
 
 
+/*
+ * next context
+ */
 #define MRKL4C_WRITE_NEXT_PRINTFLIKE_CONTEXT(                          \
         ld, level, context, mod, msg, fmt, ...)                        \
             _mrkl4c_nwritten = bytestream_nprintf(&_mrkl4c_ctx->bs,    \
@@ -610,6 +849,9 @@ UNUSED static const char *level_names[] = {
                                      ##__VA_ARGS__)                    \
 
 
+/*
+ * stop
+ */
 #define MRKL4C_WRITE_STOP_PRINTFLIKE(ld, level, mod, msg, ...)                 \
             if (_mrkl4c_nwritten < 0) {                                        \
                 bytestream_rewind(&_mrkl4c_ctx->bs);                           \
@@ -627,6 +869,9 @@ UNUSED static const char *level_names[] = {
 
 
 
+/*
+ * stop context
+ */
 #define MRKL4C_WRITE_STOP_PRINTFLIKE_CONTEXT(                                  \
         ld, level, context, mod, msg, ...)                                     \
             if (_mrkl4c_nwritten < 0) {                                        \
@@ -646,6 +891,9 @@ UNUSED static const char *level_names[] = {
 
 
 
+/*
+ * do at
+ */
 #define MRKL4C_DO_AT(ld, level, mod, msg, __a1)                                \
     do {                                                                       \
         mrkl4c_ctx_t *_mrkl4c_ctx;                                             \
