@@ -14,7 +14,10 @@ CLEANFILES = $(BUILT_SOURCES) *.core core
 AM_MAKEFLAGS = -s
 
 lib_LTLIBRARIES = libmrkl4c.la
+
+if DEVTOOLS
 bin_PROGRAMS = l4cdefgen
+endif
 
 nobase_include_HEADERS = mrkl4c.h
 
@@ -23,7 +26,9 @@ noinst_HEADERS =
 libmrkl4c_la_SOURCES = mrkl4c.c
 nodist_libmrkl4c_la_SOURCES = diag.c
 
+if DEVTOOLS
 l4cdefgen_SOURCES = l4cdefgen.c
+endif
 
 DEBUG_LD_FLAGS =
 if DEBUG
@@ -47,9 +52,11 @@ libmrkl4c_la_CFLAGS = $(DEBUG_CC_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOU
 libmrkl4c_la_LDFLAGS += $(DEBUG_LD_FLAGS) -version-info 0:0:0 -L$(libdir)
 libmrkl4c_la_LIBADD = -lmrkcommon
 
+if DEVTOOLS
 l4cdefgen_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
 l4cdefgen_LDFLAGS = -L$(libdir)
 l4cdefgen_LDADD = -lmrkcommon
+endif
 
 SUBDIRS = .
 

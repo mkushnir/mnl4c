@@ -115,10 +115,20 @@ AC_ARG_ENABLE(lto,
 
 AM_CONDITIONAL([LTO], [test "$enable_lto" = "yes"])
 
+AC_ARG_WITH(devtools,
+            AC_HELP_STRING([--with-devtools],
+            [Build development tools (default=yes)]),
+            [],
+            [with_devtools=yes])
+
+AS_IF([test "$with_devtools" = "yes"],
+      [AC_MSG_NOTICE([Will build devtools])],
+      [AC_MSG_NOTICE([Will not build devtools])])
+
+AM_CONDITIONAL([DEVTOOLS], [test "$with_devtools" = "yes"])
+
 AM_CONDITIONAL([LINUX], [echo $build_os | grep linux >/dev/null])
 AM_CONDITIONAL([FREEBSD], [echo $build_os | grep freebsd >/dev/null])
-
-#dnl pass LDFLAGS=-L${LOCALBASE}/lib in the environment
-#AC_CHECK_LIB(mrkcommon, _fini, [], [AC_MSG_FAILURE(libmrkcommon.so is required. Please find it at git@github.com:mkushnir/mrkcommon.git)])
+AM_CONDITIONAL([DARWIN], [echo $build_os | grep darwin >/dev/null])
 
 AC_OUTPUT
