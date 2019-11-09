@@ -163,14 +163,14 @@ writer_file_cleanup_shadows(mrkl4c_writer_t *writer)
         TRACE("traverse_dir() failed, could not cleanup shadows");
     }
 
-    if (params.files.elnum > writer->data.file.maxfiles) {
+    if (ARRAY_ELNUM(&params.files) > writer->data.file.maxfiles) {
         array_sort(&params.files,
                    (array_compar_t)_writer_file_cleanup_shadows_cmp);
 
         for (fname = array_first(&params.files, &it);
              fname != NULL;
              fname = array_next(&params.files, &it)) {
-            if (it.iter < params.files.elnum - writer->data.file.maxfiles) {
+            if (it.iter < ARRAY_ELNUM(&params.files) - writer->data.file.maxfiles) {
                 //TRACE("unlink: %s", *fname);
                 if (unlink(*fname) != 0) {
                     TRACE("Failed to unlink %s while cleaninng up shadwos",
