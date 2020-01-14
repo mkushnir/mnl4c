@@ -511,6 +511,7 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
     if ((minfo = array_get_safe(&(*pctx)->minfos, id)) == NULL) {
         FAIL("array_get_safe");
     }
+    (void)minfo_init(minfo);
     minfo->id = id;
     minfo->flevel = level;
     minfo->elevel = level;
