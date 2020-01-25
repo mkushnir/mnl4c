@@ -12,10 +12,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <mrkcommon/array.h>
-#include <mrkcommon/hash.h>
-#include <mrkcommon/bytes.h>
-#include <mrkcommon/util.h>
+#include <mncommon/array.h>
+#include <mncommon/hash.h>
+#include <mncommon/bytes.h>
+#include <mncommon/util.h>
 
 #include "config.h"
 
@@ -111,11 +111,11 @@ render_head(FILE *fhout, FILE *fcout, const char *hout, const char *lib)
     hout_macroname = bytes_new_from_str(hout);
 
     macroname_translate(hout_macroname);
-    fprintf(fcout, "#include <mrkl4c.h>\n");
+    fprintf(fcout, "#include <mnl4c.h>\n");
     fprintf(fcout, "#include \"%s\"\n", hout);
     fprintf(fcout,
         "void\n"
-        "%s_init_logdef(mrkl4c_logger_t logger)\n"
+        "%s_init_logdef(mnl4c_logger_t logger)\n"
         "{\n",
         lib);
 
@@ -180,7 +180,7 @@ static l4cgen_module_t *
 l4cgen_module_new(void)
 {
     l4cgen_module_t *res;
-    if (MRKUNLIKELY((res = malloc(sizeof(l4cgen_module_t))) == NULL)) {
+    if (MNUNLIKELY((res = malloc(sizeof(l4cgen_module_t))) == NULL)) {
         FAIL("malloc");
     }
     (void)l4cgen_module_init(res);
@@ -323,7 +323,7 @@ process_logdef(const char *fname)
             }
         } else {
             l4cgen_message_t *msg;
-            if (MRKUNLIKELY((msg = array_incr(&current_mod->messages)) == NULL)) {
+            if (MNUNLIKELY((msg = array_incr(&current_mod->messages)) == NULL)) {
                 FAIL("array_incr");
             }
             msg->level = bytes_new_from_str(a);
@@ -442,21 +442,21 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
     }
 
     fprintf(params->fhout,
-        "#define %s_LLOG(logger, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE_FLEVEL(logger, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_CONTEXT_LLOG(logger, context, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT_FLEVEL(logger, context, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG(logger, level, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_CONTEXT_LOG(logger, level, context, msg, ...) MRKL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG_LT(logger, level, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_CONTEXT_LOG_LT(logger, level, context, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE_LT_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG_START(logger, level, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG_CONTEXT_START(logger, level, context, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG_START_LT(logger, level, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE_LT(logger, level, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG_CONTEXT_START_LT(logger, level, context, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE_LT_CONTEXT(logger, level, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG_NEXT(logger, level, msg, fmt, ...) MRKL4C_WRITE_NEXT_PRINTFLIKE(logger, level, %s, msg, fmt, ##__VA_ARGS__)\n"
-        "#define %s_LOG_CONTEXT_NEXT(logger, level, context, msg, fmt, ...) MRKL4C_WRITE_NEXT_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, fmt, ##__VA_ARGS__)\n"
-        "#define %s_LOG_STOP(logger, level, msg, ...) MRKL4C_WRITE_STOP_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_LOG_CONTEXT_STOP(logger, level, context, msg, ...) MRKL4C_WRITE_STOP_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
-        "#define %s_DO_AT(logger, level, msg, __a1) MRKL4C_DO_AT(logger, level, %s, msg, __a1)\n"
+        "#define %s_LLOG(logger, msg, ...) MNL4C_WRITE_MAYBE_PRINTFLIKE_FLEVEL(logger, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LLOG(logger, context, msg, ...) MNL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT_FLEVEL(logger, context, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG(logger, level, msg, ...) MNL4C_WRITE_MAYBE_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LOG(logger, level, context, msg, ...) MNL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_LT(logger, level, msg, ...) MNL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LOG_LT(logger, level, context, msg, ...) MNL4C_WRITE_ONCE_PRINTFLIKE_LT_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_START(logger, level, msg, ...) MNL4C_WRITE_START_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_CONTEXT_START(logger, level, context, msg, ...) MNL4C_WRITE_START_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_START_LT(logger, level, msg, ...) MNL4C_WRITE_START_PRINTFLIKE_LT(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_CONTEXT_START_LT(logger, level, context, msg, ...) MNL4C_WRITE_START_PRINTFLIKE_LT_CONTEXT(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_NEXT(logger, level, msg, fmt, ...) MNL4C_WRITE_NEXT_PRINTFLIKE(logger, level, %s, msg, fmt, ##__VA_ARGS__)\n"
+        "#define %s_LOG_CONTEXT_NEXT(logger, level, context, msg, fmt, ...) MNL4C_WRITE_NEXT_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, fmt, ##__VA_ARGS__)\n"
+        "#define %s_LOG_STOP(logger, level, msg, ...) MNL4C_WRITE_STOP_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_CONTEXT_STOP(logger, level, context, msg, ...) MNL4C_WRITE_STOP_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_DO_AT(logger, level, msg, __a1) MNL4C_DO_AT(logger, level, %s, msg, __a1)\n"
         "#define %s_LERROR(logger, msg, ...) %s_LOG_LT(logger, LOG_ERR, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LERROR(logger, context, msg, ...) %s_CONTEXT_LOG_LT(logger, LOG_ERR, context, msg, ##__VA_ARGS__)\n"
         "#define %s_LWARNING(logger, msg, ...) %s_LOG_LT(logger, LOG_WARNING, msg, ##__VA_ARGS__)\n"
@@ -465,10 +465,10 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
         "#define %s_CONTEXT_LINFO(logger, context, msg, ...) %s_CONTEXT_LOG_LT(logger, LOG_INFO, context, msg, ##__VA_ARGS__)\n"
         "#define %s_LDEBUG(logger, msg, ...) %s_LOG(logger, LOG_DEBUG, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LDEBUG(logger, context, msg, ...) %s_CONTEXT_LOG(logger, LOG_DEBUG, context, msg, ##__VA_ARGS__)\n"
-        "#define %s_LREG(logger, level, msg) mrkl4c_register_msg(logger, level, %s_ ## msg ## _ID, \"%s_\" #msg)\n"
+        "#define %s_LREG(logger, level, msg) mnl4c_register_msg(logger, level, %s_ ## msg ## _ID, \"%s_\" #msg)\n"
         "#define %s_NAME %s\n"
-        "#define %s_PREFIX _MRKL4C_TSPIDMOD_FMT\n"
-        "#define %s_ARGS _MRKL4C_TSPIDMOD_ARGS(%s)\n",
+        "#define %s_PREFIX _MNL4C_TSPIDMOD_FMT\n"
+        "#define %s_ARGS _MNL4C_TSPIDMOD_ARGS(%s)\n",
         BDATA(mod->mid),
         BDATA(mod->mid),
         BDATA(mod->mid),
@@ -547,7 +547,7 @@ static void
 render_tail(FILE *fhout, FILE *fcout, const char *lib)
 {
     fprintf(fcout, "}\n");
-    fprintf(fhout, "void %s_init_logdef(mrkl4c_logger_t);\n", lib);
+    fprintf(fhout, "void %s_init_logdef(mnl4c_logger_t);\n", lib);
     fprintf(fhout,
         "#ifdef __cplusplus\n"
         "}\n"

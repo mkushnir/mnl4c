@@ -15,12 +15,12 @@ GNU_CONFIGURE=	yes
 CONFIGURE_ENV=	LDFLAGS="-L${LOCALBASE}/lib -L${HOME}/lib" CFLAGS=-I${HOME}/include
 
 PLIST_FILES=	bin/l4cdefgen \
-		include/mrkl4c.h \
-		lib/libmrkl4c.a \
-		lib/libmrkl4c.la \
-		lib/libmrkl4c.so \
-		lib/libmrkl4c.so.0 \
-		lib/libmrkl4c.so.0.0.0
+		include/mnl4c.h \
+		lib/libmnl4c.a \
+		lib/libmnl4c.la \
+		lib/libmnl4c.so \
+		lib/libmnl4c.so.0 \
+		lib/libmnl4c.so.0.0.0
 
 PLIST_DIRS=	bin lib include
 

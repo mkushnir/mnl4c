@@ -29,12 +29,12 @@ project's source files, and include _logdef.h_ in your program.
 
 
 Make sure the library is globally initialized and finalized in your
-program by calling `mrkl4c_init()` and `mrkl4c_fini()` in appropriate
+program by calling `mnl4c_init()` and `mnl4c_fini()` in appropriate
 places.
 
 Then you can use several independent loggers by managing them with
-`mrkl4c_open()`,  `mrkl4c_close()`, `mrkl4c_set_bufsz()`, and
-`mrkl4c_set_level()`.
+`mnl4c_open()`,  `mnl4c_close()`, `mnl4c_set_bufsz()`, and
+`mnl4c_set_level()`.
 
 
 You then can register individual log messages with any of the opened
@@ -49,7 +49,7 @@ for example:
 
 In this example, `FOO` is the name of the logging group, `LINFO` is
 a macro class that will generate logging code at the INFO level, `logger`
-is your `mrkl4c_logger_t` instance, `QWE` is the marco ID of the log
+is your `mnl4c_logger_t` instance, `QWE` is the marco ID of the log
 message, and `NULL` represents an empty list of printf-line arguments.
 
 The following line would be produced:

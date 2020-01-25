@@ -9,25 +9,25 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 
-#include <mrkcommon/array.h>
-#include <mrkcommon/bytestream.h>
+#include <mncommon/array.h>
+#include <mncommon/bytestream.h>
 #define TRRET_DEBUG
-#include <mrkcommon/dumpm.h>
-#include <mrkcommon/traversedir.h>
-#include <mrkcommon/util.h>
+#include <mncommon/dumpm.h>
+#include <mncommon/traversedir.h>
+#include <mncommon/util.h>
 
 #define SYSLOG_NAMES
-#include <mrkl4c.h>
+#include <mnl4c.h>
 
 #include "diag.h"
 
 
-#define MRKL4C_DEFAULT_BUFSZ 4096
+#define MNL4C_DEFAULT_BUFSZ 4096
 
 static mnarray_t ctxes;
 
 double
-mrkl4c_now_posix(void){
+mnl4c_now_posix(void){
     struct timeval tv;
 
     (void)gettimeofday(&tv, NULL);
@@ -36,7 +36,7 @@ mrkl4c_now_posix(void){
 
 
 static void
-mrkl4c_write_stdout(mrkl4c_ctx_t *ctx)
+mnl4c_write_stdout(mnl4c_ctx_t *ctx)
 {
     (void)bytestream_cat(&ctx->bs, 1, "");
     fprintf(stdout, "%s", SDATA(&ctx->bs, 0));
@@ -45,7 +45,7 @@ mrkl4c_write_stdout(mrkl4c_ctx_t *ctx)
 
 
 static void
-mrkl4c_write_stderr(mrkl4c_ctx_t *ctx)
+mnl4c_write_stderr(mnl4c_ctx_t *ctx)
 {
     (void)bytestream_cat(&ctx->bs, 1, "");
     fprintf(stderr, "%s", SDATA(&ctx->bs, 0));
@@ -54,7 +54,7 @@ mrkl4c_write_stderr(mrkl4c_ctx_t *ctx)
 
 
 static void
-writer_init(mrkl4c_writer_t *writer)
+writer_init(mnl4c_writer_t *writer)
 {
     writer->write = NULL;
     writer->data.file.path = NULL;
@@ -136,7 +136,7 @@ _writer_file_cleanup_shadows_cmp(char **a, char **b)
 }
 
 static void
-writer_file_cleanup_shadows(mrkl4c_writer_t *writer)
+writer_file_cleanup_shadows(mnl4c_writer_t *writer)
 {
     mnbytes_t *tmp;
     struct {
@@ -188,25 +188,25 @@ writer_file_cleanup_shadows(mrkl4c_writer_t *writer)
 
 
 static int
-writer_file_new_shadow(mrkl4c_writer_t *writer)
+writer_file_new_shadow(mnl4c_writer_t *writer)
 {
     int oflags;
     int fd;
 
-    writer->data.file.starttm = mrkl4c_now_posix();
+    writer->data.file.starttm = mnl4c_now_posix();
     BYTES_DECREF(&writer->data.file.shadow_path);
     writer->data.file.shadow_path =
         bytes_printf("%s.%ld",
                      BDATA(writer->data.file.path),
                      (unsigned long)writer->data.file.starttm);
 
-    oflags = MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS;
+    oflags = MNL4C_FWRITER_DEFAULT_OPEN_FLAGS;
     if ((fd = open(BCDATA(writer->data.file.shadow_path),
                      oflags,
-                     MRKL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
+                     MNL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
         TRRET(WRITER_FILE_NEW_SHADOW + 1);
     }
-    if (writer->data.file.flags & MRKL4C_OPEN_FLOCK) {
+    if (writer->data.file.flags & MNL4C_OPEN_FLOCK) {
         if (flock(fd, LOCK_EX|LOCK_NB) == -1) {
             TR(WRITER_FILE_NEW_SHADOW + 2);
         }
@@ -234,18 +234,18 @@ writer_file_new_shadow(mrkl4c_writer_t *writer)
 }
 
 
-static int _writer_file_open(mrkl4c_writer_t *writer)
+static int _writer_file_open(mnl4c_writer_t *writer)
 {
     int oflags;
 
-    oflags = MRKL4C_FWRITER_DEFAULT_OPEN_FLAGS;
+    oflags = MNL4C_FWRITER_DEFAULT_OPEN_FLAGS;
     if ((writer->data.file.fd =
                 open(BCDATA(writer->data.file.path),
                      oflags,
-                     MRKL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
+                     MNL4C_FWRITER_DEFAULT_OPEN_MODE)) < 0) {
         TRRET(_WRITER_FILE_OPEN + 1);
     }
-    if (writer->data.file.flags & MRKL4C_OPEN_FLOCK) {
+    if (writer->data.file.flags & MNL4C_OPEN_FLOCK) {
         if (flock(writer->data.file.fd, LOCK_EX|LOCK_NB) == -1) {
             close(writer->data.file.fd);
             writer->data.file.fd = -1;
@@ -256,7 +256,7 @@ static int _writer_file_open(mrkl4c_writer_t *writer)
 }
 
 static int
-writer_file_check_rollover(mrkl4c_writer_t *writer)
+writer_file_check_rollover(mnl4c_writer_t *writer)
 {
     int res;
 
@@ -296,7 +296,7 @@ writer_file_check_rollover(mrkl4c_writer_t *writer)
 
 
 static int
-writer_file_open(mrkl4c_writer_t *writer)
+writer_file_open(mnl4c_writer_t *writer)
 {
     struct stat sb;
     /*
@@ -371,7 +371,7 @@ writer_file_open(mrkl4c_writer_t *writer)
 
 
 static void
-mrkl4c_write_file(mrkl4c_ctx_t *ctx)
+mnl4c_write_file(mnl4c_ctx_t *ctx)
 {
     ssize_t nwritten;
 
@@ -381,7 +381,7 @@ mrkl4c_write_file(mrkl4c_ctx_t *ctx)
     //      ctx->writer.data.file.curtm);
 
     //assert(ctx->writer.data.file.fd >= 0);
-    if (MRKUNLIKELY(
+    if (MNUNLIKELY(
         (nwritten = write(ctx->writer.data.file.fd,
                           SDATA(&ctx->bs, 0),
                           SEOD(&ctx->bs))) <= 0)) {
@@ -400,14 +400,14 @@ mrkl4c_write_file(mrkl4c_ctx_t *ctx)
 
 
 static void
-cache_init(mrkl4c_cache_t *cache)
+cache_init(mnl4c_cache_t *cache)
 {
     cache->pid = getpid();
 }
 
 
 static void
-writer_fini(mrkl4c_writer_t *writer)
+writer_fini(mnl4c_writer_t *writer)
 {
     BYTES_DECREF(&writer->data.file.path);
     BYTES_DECREF(&writer->data.file.shadow_path);
@@ -415,7 +415,7 @@ writer_fini(mrkl4c_writer_t *writer)
 
 
 static int
-minfo_init(mrkl4c_minfo_t *minfo)
+minfo_init(mnl4c_minfo_t *minfo)
 {
     minfo->name = NULL;
     minfo->throttle_threshold = -1.0l;
@@ -425,19 +425,19 @@ minfo_init(mrkl4c_minfo_t *minfo)
 
 
 static int
-minfo_fini(mrkl4c_minfo_t *minfo)
+minfo_fini(mnl4c_minfo_t *minfo)
 {
     BYTES_DECREF(&minfo->name);
     return 0;
 }
 
 
-static mrkl4c_ctx_t *
-mrkl4c_ctx_new(ssize_t bsbufsz)
+static mnl4c_ctx_t *
+mnl4c_ctx_new(ssize_t bsbufsz)
 {
-    mrkl4c_ctx_t *res;
+    mnl4c_ctx_t *res;
 
-    if ((res = malloc(sizeof(mrkl4c_ctx_t))) == NULL) {
+    if ((res = malloc(sizeof(mnl4c_ctx_t))) == NULL) {
         FAIL("malloc");
     }
     res->nref = 0;
@@ -446,7 +446,7 @@ mrkl4c_ctx_new(ssize_t bsbufsz)
     writer_init(&res->writer);
     cache_init(&res->cache);
     array_init(&res->minfos,
-               sizeof(mrkl4c_minfo_t),
+               sizeof(mnl4c_minfo_t),
                0,
                (array_initializer_t)minfo_init,
                (array_finalizer_t)minfo_fini);
@@ -456,7 +456,7 @@ mrkl4c_ctx_new(ssize_t bsbufsz)
 
 
 static void
-mrkl4c_ctx_destroy(mrkl4c_ctx_t **pctx)
+mnl4c_ctx_destroy(mnl4c_ctx_t **pctx)
 {
     if (*pctx != NULL) {
         bytestream_fini(&(*pctx)->bs);
@@ -469,11 +469,11 @@ mrkl4c_ctx_destroy(mrkl4c_ctx_t **pctx)
 
 
 bool
-mrkl4c_ctx_allowed(mrkl4c_ctx_t *ctx, int level, int id)
+mnl4c_ctx_allowed(mnl4c_ctx_t *ctx, int level, int id)
 {
-    mrkl4c_minfo_t *minfo;
+    mnl4c_minfo_t *minfo;
 
-    assert(id >= 0 && id < MRKL4C_MAX_MINFOS);
+    assert(id >= 0 && id < MNL4C_MAX_MINFOS);
     if ((minfo = array_get(&ctx->minfos, id)) == NULL) {
         FAIL("array_get");
     }
@@ -484,9 +484,9 @@ mrkl4c_ctx_allowed(mrkl4c_ctx_t *ctx, int level, int id)
 
 
 int
-mrkl4c_set_bufsz(mrkl4c_logger_t ld, ssize_t sz)
+mnl4c_set_bufsz(mnl4c_logger_t ld, ssize_t sz)
 {
-    mrkl4c_ctx_t **pctx;
+    mnl4c_ctx_t **pctx;
 
     if ((pctx = array_get(&ctxes, ld)) == NULL) {
         return -1;
@@ -499,15 +499,15 @@ mrkl4c_set_bufsz(mrkl4c_logger_t ld, ssize_t sz)
 
 
 void
-mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
+mnl4c_register_msg(mnl4c_logger_t ld, int level, int id, const char *name)
 {
-    mrkl4c_ctx_t **pctx;
-    mrkl4c_minfo_t *minfo;
+    mnl4c_ctx_t **pctx;
+    mnl4c_minfo_t *minfo;
 
     if ((pctx = array_get(&ctxes, ld)) == NULL) {
         FAIL("array_get");
     }
-    assert(id >= 0 && id < MRKL4C_MAX_MINFOS);
+    assert(id >= 0 && id < MNL4C_MAX_MINFOS);
     if ((minfo = array_get_safe(&(*pctx)->minfos, id)) == NULL) {
         FAIL("array_get_safe");
     }
@@ -521,10 +521,10 @@ mrkl4c_register_msg(mrkl4c_logger_t ld, int level, int id, const char *name)
 
 
 int
-mrkl4c_set_level(mrkl4c_logger_t ld, int level, mnbytes_t *prefix)
+mnl4c_set_level(mnl4c_logger_t ld, int level, mnbytes_t *prefix)
 {
-    mrkl4c_ctx_t **pctx;
-    mrkl4c_minfo_t *minfo;
+    mnl4c_ctx_t **pctx;
+    mnl4c_minfo_t *minfo;
     mnarray_iter_t it;
     int res;
 
@@ -555,10 +555,10 @@ mrkl4c_set_level(mrkl4c_logger_t ld, int level, mnbytes_t *prefix)
 
 
 int
-mrkl4c_set_throttling(mrkl4c_logger_t ld, double threshold, mnbytes_t *prefix)
+mnl4c_set_throttling(mnl4c_logger_t ld, double threshold, mnbytes_t *prefix)
 {
-    mrkl4c_ctx_t **pctx;
-    mrkl4c_minfo_t *minfo;
+    mnl4c_ctx_t **pctx;
+    mnl4c_minfo_t *minfo;
     mnarray_iter_t it;
     int res;
 
@@ -588,8 +588,8 @@ mrkl4c_set_throttling(mrkl4c_logger_t ld, double threshold, mnbytes_t *prefix)
 }
 
 
-mrkl4c_logger_t
-mrkl4c_open(unsigned ty, ...)
+mnl4c_logger_t
+mnl4c_open(unsigned ty, ...)
 {
     va_list ap;
     const char *fpath;
@@ -597,7 +597,7 @@ mrkl4c_open(unsigned ty, ...)
     double maxtm;
     size_t maxfiles;
     int flags;
-    mrkl4c_ctx_t **pctx;
+    mnl4c_ctx_t **pctx;
     mnarray_iter_t it;
 
     fpath = NULL;
@@ -606,19 +606,19 @@ mrkl4c_open(unsigned ty, ...)
     maxfiles = 0;
     flags = 0;
 
-    if ((ty & MRKL4C_OPEN_FLOCK) &&
-        ((ty & MRKL4C_OPEN_TY) != MRKL4C_OPEN_FILE)) {
+    if ((ty & MNL4C_OPEN_FLOCK) &&
+        ((ty & MNL4C_OPEN_TY) != MNL4C_OPEN_FILE)) {
         TRACE("non-file flock is not supported");
         return -1;
     }
 
     va_start(ap, ty);
-    switch (ty & MRKL4C_OPEN_TY) {
-    case MRKL4C_OPEN_STDOUT:
-    case MRKL4C_OPEN_STDERR:
+    switch (ty & MNL4C_OPEN_TY) {
+    case MNL4C_OPEN_STDOUT:
+    case MNL4C_OPEN_STDERR:
         break;
 
-    case MRKL4C_OPEN_FILE:
+    case MNL4C_OPEN_FILE:
         fpath = va_arg(ap, const char *);
         maxsz = va_arg(ap, size_t);
         maxtm = va_arg(ap, double);
@@ -627,7 +627,7 @@ mrkl4c_open(unsigned ty, ...)
         break;
 
     default:
-        FAIL("mrkl4c_open");
+        FAIL("mnl4c_open");
         break;
     }
     va_end(ap);
@@ -671,23 +671,23 @@ mrkl4c_open(unsigned ty, ...)
             if ((pctx = array_incr_iter(&ctxes, &it)) == NULL) {
                 FAIL("array_incr_iter");
             }
-            (*pctx)->ty = ty & MRKL4C_OPEN_TY;
+            (*pctx)->ty = ty & MNL4C_OPEN_TY;
         }
 
-        switch (ty & MRKL4C_OPEN_TY) {
-        case MRKL4C_OPEN_STDOUT:
-            (*pctx)->writer.write = mrkl4c_write_stdout;
-            (*pctx)->writer.data.file.curtm = mrkl4c_now_posix();
+        switch (ty & MNL4C_OPEN_TY) {
+        case MNL4C_OPEN_STDOUT:
+            (*pctx)->writer.write = mnl4c_write_stdout;
+            (*pctx)->writer.data.file.curtm = mnl4c_now_posix();
             break;
 
-        case MRKL4C_OPEN_STDERR:
-            (*pctx)->writer.write = mrkl4c_write_stderr;
-            (*pctx)->writer.data.file.curtm = mrkl4c_now_posix();
+        case MNL4C_OPEN_STDERR:
+            (*pctx)->writer.write = mnl4c_write_stderr;
+            (*pctx)->writer.data.file.curtm = mnl4c_now_posix();
             break;
 
-        case MRKL4C_OPEN_FILE:
+        case MNL4C_OPEN_FILE:
             assert(fpath != NULL);
-            (*pctx)->writer.write = mrkl4c_write_file;
+            (*pctx)->writer.write = mnl4c_write_file;
             if (*fpath != '/') {
                 TRACE("fpath is not an absolute path: %s", fpath);
                 goto err;
@@ -695,7 +695,7 @@ mrkl4c_open(unsigned ty, ...)
             (*pctx)->writer.data.file.path = bytes_new_from_str(fpath);
             (*pctx)->writer.data.file.maxsz = maxsz;
             (*pctx)->writer.data.file.maxtm = maxtm;
-            (*pctx)->writer.data.file.starttm = mrkl4c_now_posix();
+            (*pctx)->writer.data.file.starttm = mnl4c_now_posix();
             (*pctx)->writer.data.file.curtm =
                 (*pctx)->writer.data.file.starttm;
             (*pctx)->writer.data.file.maxfiles = maxfiles;
@@ -706,24 +706,24 @@ mrkl4c_open(unsigned ty, ...)
             break;
 
         default:
-            FAIL("mrkl4c_open");
+            FAIL("mnl4c_open");
             break;
         }
     }
 
     ++(*pctx)->nref;
-    return (mrkl4c_logger_t)it.iter;
+    return (mnl4c_logger_t)it.iter;
 
 err:
-    (void)mrkl4c_close((mrkl4c_logger_t)it.iter);
-    return MRKL4C_LOGGER_INVALID;
+    (void)mnl4c_close((mnl4c_logger_t)it.iter);
+    return MNL4C_LOGGER_INVALID;
 }
 
 
-mrkl4c_ctx_t *
-mrkl4c_get_ctx(mrkl4c_logger_t ld)
+mnl4c_ctx_t *
+mnl4c_get_ctx(mnl4c_logger_t ld)
 {
-    mrkl4c_ctx_t **pctx;
+    mnl4c_ctx_t **pctx;
 
     if ((pctx = array_get(&ctxes, ld)) == NULL) {
         return NULL;
@@ -733,18 +733,18 @@ mrkl4c_get_ctx(mrkl4c_logger_t ld)
 }
 
 
-mrkl4c_logger_t
-mrkl4c_incref(mrkl4c_logger_t ld)
+mnl4c_logger_t
+mnl4c_incref(mnl4c_logger_t ld)
 {
-    mrkl4c_logger_t res;
-    mrkl4c_ctx_t **pctx;
+    mnl4c_logger_t res;
+    mnl4c_ctx_t **pctx;
 
     if ((pctx = array_get(&ctxes, ld)) == NULL) {
-        res = MRKL4C_LOGGER_INVALID;
+        res = MNL4C_LOGGER_INVALID;
         goto end;
     }
     if (*pctx == NULL) {
-        res = MRKL4C_LOGGER_INVALID;
+        res = MNL4C_LOGGER_INVALID;
         goto end;
     }
     res = ld;
@@ -756,12 +756,12 @@ end:
 
 
 int
-mrkl4c_traverse_minfos(mrkl4c_logger_t ld, array_traverser_t cb, void *udata)
+mnl4c_traverse_minfos(mnl4c_logger_t ld, array_traverser_t cb, void *udata)
 {
     int res = 0;
-    mrkl4c_ctx_t *ctx;
+    mnl4c_ctx_t *ctx;
 
-    if ((ctx = mrkl4c_get_ctx(ld)) == NULL) {
+    if ((ctx = mnl4c_get_ctx(ld)) == NULL) {
         res = TRAVERSE_MINFOS + 1;
         goto end;
     }
@@ -774,9 +774,9 @@ end:
 
 
 int
-mrkl4c_close(mrkl4c_logger_t ld)
+mnl4c_close(mnl4c_logger_t ld)
 {
-    mrkl4c_ctx_t **pctx;
+    mnl4c_ctx_t **pctx;
     int res;
 
     if ((pctx = array_get(&ctxes, ld)) == NULL) {
@@ -806,28 +806,28 @@ end:
 
 
 static int
-ctx_init(mrkl4c_ctx_t **ctx)
+ctx_init(mnl4c_ctx_t **ctx)
 {
     assert(ctx != NULL);
-    *ctx = mrkl4c_ctx_new(MRKL4C_DEFAULT_BUFSZ);
+    *ctx = mnl4c_ctx_new(MNL4C_DEFAULT_BUFSZ);
     return 0;
 }
 
 
 static int
-ctx_fini(mrkl4c_ctx_t **ctx)
+ctx_fini(mnl4c_ctx_t **ctx)
 {
     assert(ctx != NULL);
-    mrkl4c_ctx_destroy(ctx);
+    mnl4c_ctx_destroy(ctx);
     return 0;
 }
 
 
 void
-mrkl4c_init(void)
+mnl4c_init(void)
 {
     array_init(&ctxes,
-               sizeof(mrkl4c_ctx_t *),
+               sizeof(mnl4c_ctx_t *),
                0,
                (array_initializer_t)ctx_init,
                (array_finalizer_t)ctx_fini);
@@ -835,7 +835,7 @@ mrkl4c_init(void)
 
 
 void
-mrkl4c_fini(void)
+mnl4c_fini(void)
 {
     array_fini(&ctxes);
 }

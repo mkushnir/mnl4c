@@ -3,11 +3,11 @@
 :>logdef.h
 :>logdef.c
 
-echo '#include <mrkl4c.h>' >>logdef.c
+echo '#include <mnl4c.h>' >>logdef.c
 echo '#include "logdef.h"' >>logdef.c
 echo >>logdef.c
 echo 'void' >>logdef.c
-echo 'init_logdef(mrkl4c_logger_t logger)' >>logdef.c
+echo 'init_logdef(mnl4c_logger_t logger)' >>logdef.c
 echo '{' >>logdef.c
 
 
@@ -16,21 +16,21 @@ write_macros() {
     _n=$1
     _m=$2
     cat >>logdef.h <<EOD
-#define ${_n}_LOG(logger, level, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE(logger, level, ${_n}, msg, __VA_ARGS__)
-#define ${_n}_LOG_LT(logger, level, msg, ...) MRKL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, ${_n}, msg, __VA_ARGS__)
-#define ${_n}_LOG_START(logger, level, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE(logger, level, ${_n}, msg, __VA_ARGS__)
-#define ${_n}_LOG_START_LT(logger, level, msg, ...) MRKL4C_WRITE_START_PRINTFLIKE_LT(logger, level, ${_n}, msg, __VA_ARGS__)
-#define ${_n}_LOG_NEXT(logger, level, msg, fmt, ...) MRKL4C_WRITE_NEXT_PRINTFLIKE(logger, level, ${_n}, msg, fmt, __VA_ARGS__)
-#define ${_n}_LOG_STOP(logger, level, msg) MRKL4C_WRITE_STOP_PRINTFLIKE(logger, level, ${_n}, msg)
-#define ${_n}_LOG_ALLOWED_AT(logger, level, msg, __a1) MRKL4C_ALLOWED_AT(logger, level, ${_n}, msg, __a1)
+#define ${_n}_LOG(logger, level, msg, ...) mnL4C_WRITE_ONCE_PRINTFLIKE(logger, level, ${_n}, msg, __VA_ARGS__)
+#define ${_n}_LOG_LT(logger, level, msg, ...) mnL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, ${_n}, msg, __VA_ARGS__)
+#define ${_n}_LOG_START(logger, level, msg, ...) mnL4C_WRITE_START_PRINTFLIKE(logger, level, ${_n}, msg, __VA_ARGS__)
+#define ${_n}_LOG_START_LT(logger, level, msg, ...) mnL4C_WRITE_START_PRINTFLIKE_LT(logger, level, ${_n}, msg, __VA_ARGS__)
+#define ${_n}_LOG_NEXT(logger, level, msg, fmt, ...) mnL4C_WRITE_NEXT_PRINTFLIKE(logger, level, ${_n}, msg, fmt, __VA_ARGS__)
+#define ${_n}_LOG_STOP(logger, level, msg) mnL4C_WRITE_STOP_PRINTFLIKE(logger, level, ${_n}, msg)
+#define ${_n}_LOG_ALLOWED_AT(logger, level, msg, __a1) mnL4C_ALLOWED_AT(logger, level, ${_n}, msg, __a1)
 #define ${_n}_LERROR(logger, msg, ...) ${_n}_LOG_LT(logger, LOG_ERR, msg, __VA_ARGS__)
 #define ${_n}_LWARNING(logger, msg, ...) ${_n}_LOG_LT(logger, LOG_WARNING, msg, __VA_ARGS__)
 #define ${_n}_LINFO(logger, msg, ...) ${_n}_LOG_LT(logger, LOG_INFO, msg, __VA_ARGS__)
 #define ${_n}_LDEBUG(logger, msg, ...) ${_n}_LOG(logger, LOG_DEBUG, msg, __VA_ARGS__)
-#define ${_n}_LREG(logger, level, msg) mrkl4c_register_msg(logger, level, ${_n}_ ## msg ## _ID, "${_n}" "_" #msg)
+#define ${_n}_LREG(logger, level, msg) mnl4c_register_msg(logger, level, ${_n}_ ## msg ## _ID, "${_n}" "_" #msg)
 #define ${_n}_NAME ${_m}
-#define ${_n}_PREFIX _MRKL4C_TSPIDMOD_FMT
-#define ${_n}_ARGS _MRKL4C_TSPIDMOD_ARGS(${_n})
+#define ${_n}_PREFIX _mnL4C_TSPIDMOD_FMT
+#define ${_n}_ARGS _mnL4C_TSPIDMOD_ARGS(${_n})
 EOD
 }
 
@@ -67,4 +67,4 @@ do
     fi
 done
 echo '}' >>logdef.c
-echo 'void init_logdef(mrkl4c_logger_t);' >>logdef.h
+echo 'void init_logdef(mnl4c_logger_t);' >>logdef.h

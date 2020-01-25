@@ -1,4 +1,4 @@
-AC_INIT(mrkl4c, 0.1, markiyan.kushnir@gmail.com, mrkl4c, https://github.com/mkushnir)
+AC_INIT(mnl4c, 0.1, markiyan.kushnir@gmail.com, mnl4c, https://github.com/mkushnir)
 
 AS_IF([test -n "$USE_GCC"],
 [

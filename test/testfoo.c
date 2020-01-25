@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <time.h>
 
-#include <mrkcommon/dumpm.h>
-#include <mrkl4c.h>
+#include <mncommon/dumpm.h>
+#include <mnl4c.h>
 
 #include "unittest.h"
 #include "my-logdef.h"
@@ -23,8 +23,8 @@ static void
 test0(void)
 {
     UNUSED int res;
-    mrkl4c_logger_t logger0;
-    mrkl4c_logger_t logger1;
+    mnl4c_logger_t logger0;
+    mnl4c_logger_t logger1;
     struct {
         long rnd;
         int in;
@@ -39,14 +39,14 @@ test0(void)
         assert(CDATA.in == CDATA.expected);
     }
 
-    mrkl4c_init();
+    mnl4c_init();
 
-    logger0 = mrkl4c_open(MRKL4C_OPEN_STDERR);
+    logger0 = mnl4c_open(MNL4C_OPEN_STDERR);
     assert(logger0 != -1);
     foo_init_logdef(logger0);
-    logger1 = mrkl4c_open(MRKL4C_OPEN_FILE, "/tmp/mrkl4c-testfoo.log", 4096, 20.0, 10, 0);
+    logger1 = mnl4c_open(MNL4C_OPEN_FILE, "/tmp/mnl4c-testfoo.log", 4096, 20.0, 10, 0);
     assert(logger1 != -1);
-    (void)mrkl4c_set_bufsz(logger1, 256);
+    (void)mnl4c_set_bufsz(logger1, 256);
     foo_init_logdef(logger1);
 
     FOO_LERROR(logger0, QWE, 1, 2.0, "qwe123123123123123123123");
@@ -66,7 +66,7 @@ test0(void)
     FOO_LINFO(logger1, QWE, 11, 22.22, "qweQWEQWEQWE!@#!@#!@");
 
     /* complex */
-    res = mrkl4c_set_level(logger1, LOG_DEBUG, &_FOO);
+    res = mnl4c_set_level(logger1, LOG_DEBUG, &_FOO);
     FOO_LOG_START(logger0, LOG_DEBUG, ASD, "start:");
     for (i = 0; i < 12; ++i) {
         FOO_LOG_NEXT(logger0, LOG_DEBUG, ASD, " %d", i);
@@ -91,9 +91,9 @@ test0(void)
         sleep(1);
     }
 
-    (void)mrkl4c_close(logger0);
-    (void)mrkl4c_close(logger1);
-    mrkl4c_fini();
+    (void)mnl4c_close(logger0);
+    (void)mnl4c_close(logger1);
+    mnl4c_fini();
 }
 
 int

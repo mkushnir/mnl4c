@@ -13,18 +13,18 @@ CLEANFILES = $(BUILT_SOURCES) *.core core
 #CLEANFILES += *.in
 AM_MAKEFLAGS = -s
 
-lib_LTLIBRARIES = libmrkl4c.la
+lib_LTLIBRARIES = libmnl4c.la
 
 if DEVTOOLS
 bin_PROGRAMS = l4cdefgen
 endif
 
-nobase_include_HEADERS = mrkl4c.h
+nobase_include_HEADERS = mnl4c.h
 
 noinst_HEADERS =
 
-libmrkl4c_la_SOURCES = mrkl4c.c
-nodist_libmrkl4c_la_SOURCES = diag.c
+libmnl4c_la_SOURCES = mnl4c.c
+nodist_libmnl4c_la_SOURCES = diag.c
 
 if DEVTOOLS
 l4cdefgen_SOURCES = l4cdefgen.c
@@ -43,25 +43,25 @@ endif
 endif
 
 if ALLSTATIC
-libmrkl4c_la_LDFLAGS = -all-static
+libmnl4c_la_LDFLAGS = -all-static
 else
-libmrkl4c_la_LDFLAGS =
+libmnl4c_la_LDFLAGS =
 endif
 
-libmrkl4c_la_CFLAGS = $(DEBUG_CC_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
-libmrkl4c_la_LDFLAGS += $(DEBUG_LD_FLAGS) -version-info 0:0:0 -L$(libdir)
-libmrkl4c_la_LIBADD = -lmrkcommon
+libmnl4c_la_CFLAGS = $(DEBUG_CC_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
+libmnl4c_la_LDFLAGS += $(DEBUG_LD_FLAGS) -version-info 0:0:0 -L$(libdir)
+libmnl4c_la_LIBADD = -lmncommon
 
 if DEVTOOLS
 l4cdefgen_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
 l4cdefgen_LDFLAGS = -L$(libdir)
-l4cdefgen_LDADD = -lmrkcommon
+l4cdefgen_LDADD = -lmncommon
 endif
 
 SUBDIRS = .
 
 diag.c diag.h: $(diags)
-	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mrkl4c -H diag.h -C diag.c *.[ch]
+	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mnl4c -H diag.h -C diag.c *.[ch]
 
 run: all
 	for i in $(bin_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;

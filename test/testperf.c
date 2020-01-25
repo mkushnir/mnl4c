@@ -1,15 +1,15 @@
 #include <assert.h>
 
-#include <mrkcommon/dumpm.h>
-#include <mrkcommon/bytes.h>
-#include <mrkcommon/profile.h>
-#include <mrkcommon/unittest.h>
+#include <mncommon/dumpm.h>
+#include <mncommon/bytes.h>
+#include <mncommon/profile.h>
+#include <mncommon/unittest.h>
 
-#include <mrkl4c.h>
+#include <mnl4c.h>
 
 #include "my-logdef.h"
 
-mrkl4c_logger_t logger;
+mnl4c_logger_t logger;
 
 #define WLEN 50
 static int
@@ -66,13 +66,13 @@ main(int argc, UNUSED char *argv[static argc])
     unsigned n;
     BYTES_ALLOCA(_foo, "FOO");
 
-    mrkl4c_init();
+    mnl4c_init();
 
-    logger = mrkl4c_open(MRKL4C_OPEN_FILE, "/tmp/mrkl4c-perf.log", 1024*1024*16, 0.0, 10, 0);
-    (void)mrkl4c_set_bufsz(logger, 1024*1024*4);
+    logger = mnl4c_open(MNL4C_OPEN_FILE, "/tmp/mnl4c-perf.log", 1024*1024*16, 0.0, 10, 0);
+    (void)mnl4c_set_bufsz(logger, 1024*1024*4);
     foo_init_logdef(logger);
-    (void)mrkl4c_set_level(logger, LOG_DEBUG, _foo);
-    (void)mrkl4c_set_throttling(logger, 0.1, _foo);
+    (void)mnl4c_set_level(logger, LOG_DEBUG, _foo);
+    (void)mnl4c_set_throttling(logger, 0.1, _foo);
 
     n = 2230;
     while (n--) {
@@ -84,7 +84,7 @@ main(int argc, UNUSED char *argv[static argc])
     }
 
 
-    (void)mrkl4c_close(logger);
-    mrkl4c_fini();
+    (void)mnl4c_close(logger);
+    mnl4c_fini();
     return 0;
 }
