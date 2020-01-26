@@ -12,6 +12,7 @@ EXTRA_DIST = $(diags)
 CLEANFILES = $(BUILT_SOURCES) *.core core
 #CLEANFILES += *.in
 AM_MAKEFLAGS = -s
+AM_LIBTOOLFLAGS = --silent
 
 lib_LTLIBRARIES = libmnl4c.la
 
