@@ -2,19 +2,41 @@
 
 # On Linux: apt-get install autotools-dev autoconf libtool
 #
+
+_run() {
+    echo "running $@ ..."
+    eval "$@" >/dev/null 2>&1
+}
+
+die() {
+    echo $*
+    exit 1
+}
+
+do_init() {
+    _run autoreconf --force
+    if test $? -ne 0
+    then
+        if test -e .ac-aux/missing
+        then
+            die fix your errors
+        fi
+    fi
+    _run aclocal
+    _run autoheader
+    _run autoreconf
+    _run automake --add-missing
+    _run libtoolize
+    _run make distclean
+    _run autoreconf
+    ./configure --prefix=$HOME --enable-debug
+}
+
 if test "$1" = "init"
 then
     export LDFLAGS=-L$HOME/lib
     export CFLAGS=-I$HOME/include
-    #autoreconf --force --install
-    aclocal
-    autoheader
-    autoreconf
-    automake --add-missing
-    libtoolize
-    make distclean
-    autoreconf
-    ./configure --prefix=$HOME --enable-debug
+    do_init
 
 elif test "$1" = "dev"
 then
