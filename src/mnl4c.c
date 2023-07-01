@@ -521,7 +521,7 @@ mnl4c_register_msg(mnl4c_logger_t ld, int level, int id, const char *name)
 
 
 int
-mnl4c_set_level(mnl4c_logger_t ld, int level, mnbytes_t *prefix)
+mnl4c_set_level(mnl4c_logger_t ld, int level, const mnbytes_t *prefix)
 {
     mnl4c_ctx_t **pctx;
     mnl4c_minfo_t *minfo;
@@ -555,7 +555,7 @@ mnl4c_set_level(mnl4c_logger_t ld, int level, mnbytes_t *prefix)
 
 
 int
-mnl4c_set_throttling(mnl4c_logger_t ld, double threshold, mnbytes_t *prefix)
+mnl4c_set_throttling(mnl4c_logger_t ld, double threshold, const mnbytes_t *prefix)
 {
     mnl4c_ctx_t **pctx;
     mnl4c_minfo_t *minfo;

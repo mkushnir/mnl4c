@@ -104,8 +104,8 @@ int mnl4c_traverse_minfos(mnl4c_logger_t, array_traverser_t, void *);
 bool mnl4c_ctx_allowed(mnl4c_ctx_t *, int, int);
 int mnl4c_close(mnl4c_logger_t);
 void mnl4c_register_msg(mnl4c_logger_t, int, int, const char *);
-int mnl4c_set_level(mnl4c_logger_t, int, mnbytes_t *);
-int mnl4c_set_throttling(mnl4c_logger_t, double, mnbytes_t *);
+int mnl4c_set_level(mnl4c_logger_t, int, const mnbytes_t *);
+int mnl4c_set_throttling(mnl4c_logger_t, double, const mnbytes_t *);
 void mnl4c_init(void);
 void mnl4c_fini(void);
 
