@@ -451,6 +451,9 @@ mnl4c_ctx_new(ssize_t bsbufsz)
                (array_initializer_t)minfo_init,
                (array_finalizer_t)minfo_fini);
     res->ty = 0;
+    if (MNUNLIKELY(pthread_mutex_init(&res->mtx, NULL) != 0)) {
+        FFAIL("pthread_mutex_init");
+    }
     return res;
 }
 
@@ -459,6 +462,7 @@ static void
 mnl4c_ctx_destroy(mnl4c_ctx_t **pctx)
 {
     if (*pctx != NULL) {
+        (void)pthread_mutex_destroy(&(*pctx)->mtx);
         bytestream_fini(&(*pctx)->bs);
         writer_fini(&(*pctx)->writer);
         array_fini(&(*pctx)->minfos);

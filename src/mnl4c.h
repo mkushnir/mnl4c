@@ -2,11 +2,13 @@
 #define MNL4C_H_DEFINED
 
 #include <assert.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <syslog.h>
 #include <unistd.h>
 #include <sys/stat.h>
+
 
 #include <mncommon/array.h>
 #include <mncommon/bytes.h>
@@ -65,6 +67,7 @@ typedef struct _mnl4c_cache {
 
 #define MNL4C_MAX_MINFOS 1024
 typedef struct _mnl4c_ctx {
+    pthread_mutex_t mtx;
     ssize_t nref;
     mnbytestream_t bs;
     ssize_t bsbufsz;
@@ -124,108 +127,117 @@ UNUSED static const char *level_names[] = {
 /*
  * may be flevel
  */
-#define MNL4C_WRITE_MAYBE_PRINTFLIKE_FLEVEL(ld, mod, msg, ...)                         \
-    do {                                                                               \
-        mnl4c_ctx_t *_mnl4c_ctx;                                                       \
-        mnl4c_minfo_t *_mnl4c_minfo;                                                   \
-        _mnl4c_ctx = mnl4c_get_ctx(ld);                                                \
-        assert(_mnl4c_ctx != NULL);                                                    \
-        _mnl4c_minfo = ARRAY_GET(                                                      \
-            mnl4c_minfo_t,                                                             \
-            &_mnl4c_ctx->minfos,                                                       \
-            mod ## _ ## msg ## _ID);                                                   \
-        if (mnl4c_ctx_allowed(_mnl4c_ctx,                                              \
-                               _mnl4c_minfo->flevel,                                   \
-                               mod ## _ ## msg ## _ID)) {                              \
-            ssize_t _mnl4c_nwritten;                                                   \
-            double _mnl4c_curtm;                                                       \
-            assert(_mnl4c_ctx->writer.write != NULL);                                  \
-            _mnl4c_curtm = mnl4c_now_posix();                                          \
-            if (_mnl4c_ctx->writer.data.file.curtm +                                   \
-                    _mnl4c_minfo->throttle_threshold <= _mnl4c_curtm) {                \
-                _mnl4c_ctx->writer.data.file.curtm = _mnl4c_curtm;                     \
-                _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,                  \
-                                              _mnl4c_ctx->bsbufsz,                     \
-                                              "%.06lf [%d] %s %s[%d]: "                \
-                                              mod ## _ ## msg ## _FMT,                 \
-                                              _mnl4c_ctx->                             \
-                                                writer.data.file.curtm,                \
-                                              _mnl4c_ctx->cache.pid,                   \
-                                              mod ## _NAME,                            \
-                                              level_names[_mnl4c_minfo->flevel],       \
-                                              _mnl4c_minfo->                           \
-                                                nthrottled,                            \
-                                              ##__VA_ARGS__);                          \
-                if (_mnl4c_nwritten < 0) {                                             \
-                    bytestream_rewind(&_mnl4c_ctx->bs);                                \
-                } else {                                                               \
-                    SADVANCEPOS(&_mnl4c_ctx->bs, -1);                                  \
-                    (void)bytestream_cat(&_mnl4c_ctx->bs, 1, "\n");                    \
-                    if (SEOD(&_mnl4c_ctx->bs) >= _mnl4c_ctx->bsbufsz) {                \
-                        _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
-                    }                                                                  \
-                }                                                                      \
-                _mnl4c_minfo->nthrottled = 0;                                          \
-            } else {                                                                   \
-                ++_mnl4c_minfo->nthrottled;                                            \
-            }                                                                          \
-        }                                                                              \
-    } while (0)                                                                        \
+#define MNL4C_WRITE_MAYBE_PRINTFLIKE_FLEVEL(ld, mod, msg, ...)         \
+    do {                                                               \
+        mnl4c_ctx_t *_mnl4c_ctx;                                       \
+        mnl4c_minfo_t *_mnl4c_minfo;                                   \
+        _mnl4c_ctx = mnl4c_get_ctx(ld);                                \
+        assert(_mnl4c_ctx != NULL);                                    \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                    \
+        _mnl4c_minfo = ARRAY_GET(                                      \
+            mnl4c_minfo_t,                                             \
+            &_mnl4c_ctx->minfos,                                       \
+            mod ## _ ## msg ## _ID);                                   \
+        if (mnl4c_ctx_allowed(_mnl4c_ctx,                              \
+                               _mnl4c_minfo->flevel,                   \
+                               mod ## _ ## msg ## _ID)) {              \
+            ssize_t _mnl4c_nwritten;                                   \
+            double _mnl4c_curtm;                                       \
+            assert(_mnl4c_ctx->writer.write != NULL);                  \
+            _mnl4c_curtm = mnl4c_now_posix();                          \
+            if (_mnl4c_ctx->writer.data.file.curtm +                   \
+                    _mnl4c_minfo->throttle_threshold <=                \
+                    _mnl4c_curtm) {                                    \
+                _mnl4c_ctx->writer.data.file.curtm =                   \
+                    _mnl4c_curtm;                                      \
+                _mnl4c_nwritten = bytestream_nprintf(                  \
+                        &_mnl4c_ctx->bs,                               \
+                        _mnl4c_ctx->bsbufsz,                           \
+                        "%.06lf [%d] %s %s[%d]:\t"                     \
+                        mod ## _ ## msg ## _FMT,                       \
+                        _mnl4c_ctx->writer.data.file.curtm,            \
+                        _mnl4c_ctx->cache.pid,                         \
+                        mod ## _NAME,                                  \
+                        level_names[_mnl4c_minfo->flevel],             \
+                        _mnl4c_minfo->                                 \
+                          nthrottled,                                  \
+                        ##__VA_ARGS__);                                \
+                if (_mnl4c_nwritten < 0) {                             \
+                    bytestream_rewind(&_mnl4c_ctx->bs);                \
+                } else {                                               \
+                    SADVANCEPOS(&_mnl4c_ctx->bs, -1);                  \
+                    (void)bytestream_cat(&_mnl4c_ctx->bs, 1, "\n");    \
+                    if (SEOD(&_mnl4c_ctx->bs) >= _mnl4c_ctx->bsbufsz) {\
+                        _mnl4c_ctx->writer.write(_mnl4c_ctx);          \
+                    }                                                  \
+                }                                                      \
+                _mnl4c_minfo->nthrottled = 0;                          \
+            } else {                                                   \
+                ++_mnl4c_minfo->nthrottled;                            \
+            }                                                          \
+        }                                                              \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
+    } while (0)                                                        \
 
 
 /*
  * may be context flevel
  */
-#define MNL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT_FLEVEL(                                   \
-        ld, context, mod, msg, ...)                                                    \
-    do {                                                                               \
-        mnl4c_ctx_t *_mnl4c_ctx;                                                       \
-        mnl4c_minfo_t *_mnl4c_minfo;                                                   \
-        _mnl4c_ctx = mnl4c_get_ctx(ld);                                                \
-        assert(_mnl4c_ctx != NULL);                                                    \
-        _mnl4c_minfo = ARRAY_GET(                                                      \
-            mnl4c_minfo_t,                                                             \
-            &_mnl4c_ctx->minfos,                                                       \
-            mod ## _ ## msg ## _ID);                                                   \
-        if (mnl4c_ctx_allowed(_mnl4c_ctx,                                              \
-                               _mnl4c_minfo->flevel,                                   \
-                               mod ## _ ## msg ## _ID)) {                              \
-            ssize_t _mnl4c_nwritten;                                                   \
-            double _mnl4c_curtm;                                                       \
-            assert(_mnl4c_ctx->writer.write != NULL);                                  \
-            _mnl4c_curtm = mnl4c_now_posix();                                          \
-            _mnl4c_ctx->writer.data.file.curtm = mnl4c_now_posix();                    \
-            if (_mnl4c_ctx->writer.data.file.curtm +                                   \
-                    _mnl4c_minfo->throttle_threshold <= _mnl4c_curtm) {                \
-                _mnl4c_ctx->writer.data.file.curtm = _mnl4c_curtm;                     \
-                _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,                  \
-                                              _mnl4c_ctx->bsbufsz,                     \
-                                              "%.06lf [%d] %s %s[%d]: "                \
-                                              context                                  \
-                                              mod ## _ ## msg ## _FMT,                 \
-                                              _mnl4c_ctx->                             \
-                                                writer.data.file.curtm,                \
-                                              _mnl4c_ctx->cache.pid,                   \
-                                              mod ## _NAME,                            \
-                                              level_names[_mnl4c_minfo->flevel],       \
-                                              _mnl4c_minfo->                           \
-                                                nthrottled,                            \
-                                              ##__VA_ARGS__);                          \
-                if (_mnl4c_nwritten < 0) {                                             \
-                    bytestream_rewind(&_mnl4c_ctx->bs);                                \
-                } else {                                                               \
-                    SADVANCEPOS(&_mnl4c_ctx->bs, -1);                                  \
-                    (void)bytestream_cat(&_mnl4c_ctx->bs, 1, "\n");                    \
-                    if (SEOD(&_mnl4c_ctx->bs) >= _mnl4c_ctx->bsbufsz) {                \
-                        _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
-                    }                                                                  \
-                }                                                                      \
-                _mnl4c_minfo->nthrottled = 0;                                          \
-            } else {                                                                   \
-                ++_mnl4c_minfo->nthrottled;                                            \
-            }                                                                          \
-        }                                                                              \
-    } while (0)                                                                        \
+#define MNL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT_FLEVEL(                   \
+        ld, context, mod, msg, ...)                                    \
+    do {                                                               \
+        mnl4c_ctx_t *_mnl4c_ctx;                                       \
+        mnl4c_minfo_t *_mnl4c_minfo;                                   \
+        _mnl4c_ctx = mnl4c_get_ctx(ld);                                \
+        assert(_mnl4c_ctx != NULL);                                    \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                    \
+        _mnl4c_minfo = ARRAY_GET(                                      \
+            mnl4c_minfo_t,                                             \
+            &_mnl4c_ctx->minfos,                                       \
+            mod ## _ ## msg ## _ID);                                   \
+        if (mnl4c_ctx_allowed(_mnl4c_ctx,                              \
+                               _mnl4c_minfo->flevel,                   \
+                               mod ## _ ## msg ## _ID)) {              \
+            ssize_t _mnl4c_nwritten;                                   \
+            double _mnl4c_curtm;                                       \
+            assert(_mnl4c_ctx->writer.write != NULL);                  \
+            _mnl4c_curtm = mnl4c_now_posix();                          \
+            _mnl4c_ctx->writer.data.file.curtm = mnl4c_now_posix();    \
+            if (_mnl4c_ctx->writer.data.file.curtm +                   \
+                    _mnl4c_minfo->throttle_threshold <=                \
+                    _mnl4c_curtm) {                                    \
+                _mnl4c_ctx->writer.data.file.curtm =                   \
+                    _mnl4c_curtm;                                      \
+                _mnl4c_nwritten = bytestream_nprintf(                  \
+                        &_mnl4c_ctx->bs,                               \
+                        _mnl4c_ctx->bsbufsz,                           \
+                        "%.06lf [%d] %s %s[%d]:\t"                     \
+                        context                                        \
+                        mod ## _ ## msg ## _FMT,                       \
+                        _mnl4c_ctx->                                   \
+                          writer.data.file.curtm,                      \
+                        _mnl4c_ctx->cache.pid,                         \
+                        mod ## _NAME,                                  \
+                        level_names[_mnl4c_minfo->flevel],             \
+                        _mnl4c_minfo->                                 \
+                          nthrottled,                                  \
+                        ##__VA_ARGS__);                                \
+                if (_mnl4c_nwritten < 0) {                             \
+                    bytestream_rewind(&_mnl4c_ctx->bs);                \
+                } else {                                               \
+                    SADVANCEPOS(&_mnl4c_ctx->bs, -1);                  \
+                    (void)bytestream_cat(&_mnl4c_ctx->bs, 1, "\n");    \
+                    if (SEOD(&_mnl4c_ctx->bs) >= _mnl4c_ctx->bsbufsz) {\
+                        _mnl4c_ctx->writer.write(_mnl4c_ctx);          \
+                    }                                                  \
+                }                                                      \
+                _mnl4c_minfo->nthrottled = 0;                          \
+            } else {                                                   \
+                ++_mnl4c_minfo->nthrottled;                            \
+            }                                                          \
+        }                                                              \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
+    } while (0)                                                        \
 
 
 /*
@@ -236,6 +248,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             double _mnl4c_curtm;                                               \
@@ -251,7 +264,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.data.file.curtm = _mnl4c_curtm;             \
                 _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,          \
                                               _mnl4c_ctx->bsbufsz,             \
-                                              "%.06lf [%d] %s %s[%d]: "        \
+                                              "%.06lf [%d] %s %s[%d]:\t"       \
                                               mod ## _ ## msg ## _FMT,         \
                                               _mnl4c_ctx->                     \
                                                 writer.data.file.curtm,        \
@@ -275,6 +288,7 @@ UNUSED static const char *level_names[] = {
                 ++_mnl4c_minfo->nthrottled;                                    \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -287,6 +301,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             double _mnl4c_curtm;                                               \
@@ -303,7 +318,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.data.file.curtm = _mnl4c_curtm;             \
                 _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,          \
                                               _mnl4c_ctx->bsbufsz,             \
-                                              "%.06lf [%d] %s %s[%d]: "        \
+                                              "%.06lf [%d] %s %s[%d]:\t"       \
                                               context                          \
                                               mod ## _ ## msg ## _FMT,         \
                                               _mnl4c_ctx->                     \
@@ -328,6 +343,7 @@ UNUSED static const char *level_names[] = {
                 ++_mnl4c_minfo->nthrottled;                                    \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -340,6 +356,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_minfo_t *_mnl4c_minfo;                                           \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         _mnl4c_minfo = ARRAY_GET(                                              \
             mnl4c_minfo_t,                                                     \
             &_mnl4c_ctx->minfos,                                               \
@@ -352,7 +369,7 @@ UNUSED static const char *level_names[] = {
             _mnl4c_ctx->writer.data.file.curtm = mnl4c_now_posix();            \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%.06lf [%d] %s %s: "                \
+                                          "%.06lf [%d] %s %s:\t"               \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->                         \
                                             writer.data.file.curtm,            \
@@ -368,6 +385,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -380,6 +398,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_minfo_t *_mnl4c_minfo;                                           \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         _mnl4c_minfo = ARRAY_GET(                                              \
             mnl4c_minfo_t,                                                     \
             &_mnl4c_ctx->minfos,                                               \
@@ -392,7 +411,7 @@ UNUSED static const char *level_names[] = {
             _mnl4c_ctx->writer.data.file.curtm = mnl4c_now_posix();            \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%.06lf [%d] %s %s: "                \
+                                          "%.06lf [%d] %s %s:\t"               \
                                           context                              \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->                         \
@@ -409,6 +428,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -420,13 +440,14 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             assert(_mnl4c_ctx->writer.write != NULL);                          \
             _mnl4c_ctx->writer.data.file.curtm = mnl4c_now_posix();            \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%.06lf [%d] %s %s: "                \
+                                          "%.06lf [%d] %s %s:\t"               \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->                         \
                                             writer.data.file.curtm,            \
@@ -442,6 +463,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -453,13 +475,14 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             assert(_mnl4c_ctx->writer.write != NULL);                          \
             _mnl4c_ctx->writer.data.file.curtm = mnl4c_now_posix();            \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%.06lf [%d] %s %s: "                \
+                                          "%.06lf [%d] %s %s:\t"               \
                                           context                              \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->                         \
@@ -476,6 +499,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -487,6 +511,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             struct tm *_mnl4c_tm;                                              \
@@ -502,7 +527,7 @@ UNUSED static const char *level_names[] = {
                            _mnl4c_tm);                                         \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%s [%d] %s %s: "                    \
+                                          "%s [%d] %s %s:\t"                   \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_now_str,                      \
                                           _mnl4c_ctx->cache.pid,               \
@@ -517,6 +542,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -529,6 +555,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             struct tm *_mnl4c_tm;                                              \
@@ -544,7 +571,7 @@ UNUSED static const char *level_names[] = {
                            _mnl4c_tm);                                         \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%s [%d] %s %s: "                    \
+                                          "%s [%d] %s %s:\t"                   \
                                           context                              \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_now_str,                      \
@@ -560,6 +587,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -571,6 +599,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             struct tm *_mnl4c_tm;                                              \
@@ -586,7 +615,7 @@ UNUSED static const char *level_names[] = {
                            _mnl4c_tm);                                         \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%lf %s [%d] %s %s: "                \
+                                          "%lf %s [%d] %s %s:\t"               \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->writer.data.file.curtm,  \
                                           _mnl4c_now_str,                      \
@@ -602,6 +631,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -614,6 +644,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             struct tm *_mnl4c_tm;                                              \
@@ -629,7 +660,7 @@ UNUSED static const char *level_names[] = {
                            _mnl4c_tm);                                         \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%lf %s [%d] %s %s: "                \
+                                          "%lf %s [%d] %s %s:\t"               \
                                           context                              \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->writer.data.file.curtm,  \
@@ -646,6 +677,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                          \
             }                                                                  \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 
@@ -657,12 +689,13 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             _mnl4c_ctx->writer.data.file.curtm = mnl4c_now_posix();            \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%.06lf [%d] %s %s: "                \
+                                          "%.06lf [%d] %s %s:\t"               \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->                         \
                                             writer.data.file.curtm,            \
@@ -681,12 +714,13 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             _mnl4c_ctx->writer.data.file.curtm = mnl4c_now_posix();            \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%.06lf [%d] %s %s: "                \
+                                          "%.06lf [%d] %s %s:\t"               \
                                           context                              \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->                         \
@@ -705,6 +739,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             struct tm *_mnl4c_tm;                                              \
@@ -719,7 +754,7 @@ UNUSED static const char *level_names[] = {
                            _mnl4c_tm);                                         \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%s [%d] %s %s: "                    \
+                                          "%s [%d] %s %s:\t"                   \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_now_str,                      \
                                           _mnl4c_ctx->cache.pid,               \
@@ -737,6 +772,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             struct tm *_mnl4c_tm;                                              \
@@ -751,7 +787,7 @@ UNUSED static const char *level_names[] = {
                            _mnl4c_tm);                                         \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%s [%d] %s %s: "                    \
+                                          "%s [%d] %s %s:\t"                   \
                                           context                              \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_now_str,                      \
@@ -769,6 +805,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             struct tm *_mnl4c_tm;                                              \
@@ -783,7 +820,7 @@ UNUSED static const char *level_names[] = {
                            _mnl4c_tm);                                         \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%lf %s [%d] %s %s: "                \
+                                          "%lf %s [%d] %s %s:\t"               \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->writer.data.file.curtm,  \
                                           _mnl4c_now_str,                      \
@@ -802,6 +839,7 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                  \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             ssize_t _mnl4c_nwritten;                                           \
             struct tm *_mnl4c_tm;                                              \
@@ -816,7 +854,7 @@ UNUSED static const char *level_names[] = {
                            _mnl4c_tm);                                         \
             _mnl4c_nwritten = bytestream_nprintf(&_mnl4c_ctx->bs,              \
                                           _mnl4c_ctx->bsbufsz,                 \
-                                          "%lf %s [%d] %s %s: "                \
+                                          "%lf %s [%d] %s %s:\t"               \
                                           context                              \
                                           mod ## _ ## msg ## _FMT,             \
                                           _mnl4c_ctx->writer.data.file.curtm,  \
@@ -865,6 +903,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                  \
             }                                                          \
         }                                                              \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                        \
 
 
@@ -887,6 +926,7 @@ UNUSED static const char *level_names[] = {
                 _mnl4c_ctx->writer.write(_mnl4c_ctx);                  \
             }                                                          \
         }                                                              \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                        \
 
 
@@ -899,9 +939,11 @@ UNUSED static const char *level_names[] = {
         mnl4c_ctx_t *_mnl4c_ctx;                                               \
         _mnl4c_ctx = mnl4c_get_ctx(ld);                                        \
         assert(_mnl4c_ctx != NULL);                                            \
+        (void)pthread_mutex_lock(&_mnl4c_ctx->mtx);                    \
         if (mnl4c_ctx_allowed(_mnl4c_ctx, level, mod ## _ ## msg ## _ID)) {    \
             __a1                                                               \
         }                                                                      \
+        (void)pthread_mutex_unlock(&_mnl4c_ctx->mtx);                  \
     } while (0)                                                                \
 
 

@@ -51,12 +51,12 @@ endif
 
 libmnl4c_la_CFLAGS = $(DEBUG_CC_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
 libmnl4c_la_LDFLAGS += $(DEBUG_LD_FLAGS) -version-info 0:0:0 -L$(libdir)
-libmnl4c_la_LIBADD = -lmncommon
+libmnl4c_la_LIBADD = -lmncommon -lpthread
 
 if DEVTOOLS
 l4cdefgen_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
 l4cdefgen_LDFLAGS = -L$(libdir)
-l4cdefgen_LDADD = -lmncommon
+l4cdefgen_LDADD = -lmncommon -lpthread
 endif
 
 SUBDIRS = .

@@ -447,78 +447,144 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
         "#define %s_LOG(logger, level, msg, ...) MNL4C_WRITE_MAYBE_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LOG(logger, level, context, msg, ...) MNL4C_WRITE_MAYBE_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_LT(logger, level, msg, ...) MNL4C_WRITE_ONCE_PRINTFLIKE_LT(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_LT2(logger, level, msg, ...) MNL4C_WRITE_ONCE_PRINTFLIKE_LT2(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LOG_LT(logger, level, context, msg, ...) MNL4C_WRITE_ONCE_PRINTFLIKE_LT_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LOG_LT2(logger, level, context, msg, ...) MNL4C_WRITE_ONCE_PRINTFLIKE_LT2_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_START(logger, level, msg, ...) MNL4C_WRITE_START_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_CONTEXT_START(logger, level, context, msg, ...) MNL4C_WRITE_START_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_START_LT(logger, level, msg, ...) MNL4C_WRITE_START_PRINTFLIKE_LT(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_START_LT2(logger, level, msg, ...) MNL4C_WRITE_START_PRINTFLIKE_LT2(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_CONTEXT_START_LT(logger, level, context, msg, ...) MNL4C_WRITE_START_PRINTFLIKE_LT_CONTEXT(logger, level, %s, msg, ##__VA_ARGS__)\n"
+        "#define %s_LOG_CONTEXT_START_LT2(logger, level, context, msg, ...) MNL4C_WRITE_START_PRINTFLIKE_LT2_CONTEXT(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_NEXT(logger, level, msg, fmt, ...) MNL4C_WRITE_NEXT_PRINTFLIKE(logger, level, %s, msg, fmt, ##__VA_ARGS__)\n"
         "#define %s_LOG_CONTEXT_NEXT(logger, level, context, msg, fmt, ...) MNL4C_WRITE_NEXT_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, fmt, ##__VA_ARGS__)\n"
         "#define %s_LOG_STOP(logger, level, msg, ...) MNL4C_WRITE_STOP_PRINTFLIKE(logger, level, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_LOG_CONTEXT_STOP(logger, level, context, msg, ...) MNL4C_WRITE_STOP_PRINTFLIKE_CONTEXT(logger, level, context, %s, msg, ##__VA_ARGS__)\n"
         "#define %s_DO_AT(logger, level, msg, __a1) MNL4C_DO_AT(logger, level, %s, msg, __a1)\n"
         "#define %s_LERROR(logger, msg, ...) %s_LOG_LT(logger, LOG_ERR, msg, ##__VA_ARGS__)\n"
+        "#define %s_LERROR2(logger, msg, ...) %s_LOG_LT2(logger, LOG_ERR, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LERROR(logger, context, msg, ...) %s_CONTEXT_LOG_LT(logger, LOG_ERR, context, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LERROR2(logger, context, msg, ...) %s_CONTEXT_LOG_LT2(logger, LOG_ERR, context, msg, ##__VA_ARGS__)\n"
         "#define %s_LWARNING(logger, msg, ...) %s_LOG_LT(logger, LOG_WARNING, msg, ##__VA_ARGS__)\n"
+        "#define %s_LWARNING2(logger, msg, ...) %s_LOG_LT2(logger, LOG_WARNING, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LWARNING(logger, context, msg, ...) %s_CONTEXT_LOG_LT(logger, LOG_WARNING, context, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LWARNING2(logger, context, msg, ...) %s_CONTEXT_LOG_LT2(logger, LOG_WARNING, context, msg, ##__VA_ARGS__)\n"
         "#define %s_LINFO(logger, msg, ...) %s_LOG_LT(logger, LOG_INFO, msg, ##__VA_ARGS__)\n"
+        "#define %s_LINFO2(logger, msg, ...) %s_LOG_LT2(logger, LOG_INFO, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LINFO(logger, context, msg, ...) %s_CONTEXT_LOG_LT(logger, LOG_INFO, context, msg, ##__VA_ARGS__)\n"
+        "#define %s_CONTEXT_LINFO2(logger, context, msg, ...) %s_CONTEXT_LOG_LT2(logger, LOG_INFO, context, msg, ##__VA_ARGS__)\n"
         "#define %s_LDEBUG(logger, msg, ...) %s_LOG(logger, LOG_DEBUG, msg, ##__VA_ARGS__)\n"
         "#define %s_CONTEXT_LDEBUG(logger, context, msg, ...) %s_CONTEXT_LOG(logger, LOG_DEBUG, context, msg, ##__VA_ARGS__)\n"
         "#define %s_LREG(logger, level, msg) mnl4c_register_msg(logger, level, %s_ ## msg ## _ID, \"%s_\" #msg)\n"
         "#define %s_NAME %s\n"
         "#define %s_PREFIX _MNL4C_TSPIDMOD_FMT\n"
         "#define %s_ARGS _MNL4C_TSPIDMOD_ARGS(%s)\n",
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
         BDATA(mod->mid),
         BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
+        BDATA(mod->mid),
+        BDATA(mod->mid),
+
         BDATA(mod->name),
         BDATA(mod->mid),
         BDATA(mod->mid),
