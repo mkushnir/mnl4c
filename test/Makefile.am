@@ -46,7 +46,7 @@ testfoo_SOURCES += ../src/mnl4c.c
 endif
 testfoo_CFLAGS = $(DEBUG_CC_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/test -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
 testfoo_LDFLAGS += -L$(libdir) -L$(top_srcdir)/src/.libs
-testfoo_LDADD = -lmnl4c -lmncommon
+testfoo_LDADD = -lmnl4c -lmncommon -lmndiag
 
 nodist_testperf_SOURCES = diag.c my-logdef.c
 testperf_SOURCES = testperf.c
@@ -55,7 +55,7 @@ testperf_SOURCES += ../src/mnl4c.c
 endif
 testperf_CFLAGS = $(DEBUG_CC_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ @_XOPEN_SOURCE_MACRO@ -I$(top_srcdir)/test -I$(top_srcdir)/src -I$(top_srcdir) -I$(includedir)
 testperf_LDFLAGS += -L$(libdir) -L$(top_srcdir)/src/.libs
-testperf_LDADD = -lmnl4c -lmncommon
+testperf_LDADD = -lmnl4c -lmncommon -lmndiag
 
 diag.c diag.h: $(diags)
 	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -v -S diag.txt.tmp -L mnl4c -H diag.h -C diag.c ../src/*.[ch] ./*.[ch]
