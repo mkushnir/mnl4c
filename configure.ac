@@ -86,7 +86,7 @@ dnl AM_MAINTAINER_MODE
 
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([gettimeofday])
+AC_CHECK_FUNCS([abort2 gettimeofday])
 AC_CHECK_HEADERS([fcntl.h limits.h sys/time.h syslog.h])
 AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
 AC_TYPE_PID_T
