@@ -388,8 +388,9 @@ end:
 
 
 static int
-mycb2(l4cgen_message_t *msg, void *udata)
+mycb2(void *o, void *udata)
 {
+    l4cgen_message_t *msg = o;
     struct {
         FILE *fhout;
         FILE *fcout;
@@ -427,8 +428,9 @@ mycb2(l4cgen_message_t *msg, void *udata)
 }
 
 static int
-mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
+mycb1(void *key, UNUSED void *value, void *udata)
 {
+    l4cgen_module_t *mod = key;
     struct {
         FILE *fhout;
         FILE *fcout;
@@ -594,7 +596,7 @@ mycb1(l4cgen_module_t *mod, UNUSED void *value, void *udata)
         BDATA(mod->mid),
         BDATA(mod->mid),
         BDATA(mod->mid));
-    (void)array_traverse(&mod->messages, (array_traverser_t)mycb2, udata);
+    (void)array_traverse(&mod->messages, mycb2, udata);
     return 0;
 }
 
@@ -610,7 +612,7 @@ render_body(FILE *fhout, FILE *fcout, const char *lib)
         int idx;
     } params = { fhout, fcout, lib, NULL, 0 };
 
-    (void)hash_traverse(&modules, (hash_traverser_t)mycb1, &params);
+    (void)hash_traverse(&modules, mycb1, &params);
 }
 
 
