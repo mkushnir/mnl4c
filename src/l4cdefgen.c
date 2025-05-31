@@ -133,8 +133,9 @@ render_head(FILE *fhout, FILE *fcout, const char *hout, const char *lib)
 
 
 static int
-l4cgen_message_init(l4cgen_message_t *msg)
+l4cgen_message_init(void *o)
 {
+    l4cgen_message_t *msg = o;
     msg->level = NULL;
     msg->mid = NULL;
     msg->value = NULL;
@@ -143,8 +144,9 @@ l4cgen_message_init(l4cgen_message_t *msg)
 
 
 static int
-l4cgen_message_fini(l4cgen_message_t *msg)
+l4cgen_message_fini(void *o)
 {
+    l4cgen_message_t *msg = o;
     BYTES_DECREF(&msg->level);
     BYTES_DECREF(&msg->mid);
     BYTES_DECREF(&msg->value);
@@ -158,8 +160,8 @@ l4cgen_module_init(l4cgen_module_t *mod)
     mod->mid = NULL;
     mod->name = NULL;
     if (array_init(&mod->messages, sizeof(l4cgen_message_t), 0,
-            (array_initializer_t)l4cgen_message_init,
-            (array_finalizer_t)l4cgen_message_fini) != 0) {
+            l4cgen_message_init,
+            l4cgen_message_fini) != 0) {
         FAIL("array_init");
     }
     return 0;

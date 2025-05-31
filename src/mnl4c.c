@@ -415,8 +415,9 @@ writer_fini(mnl4c_writer_t *writer)
 
 
 static int
-minfo_init(mnl4c_minfo_t *minfo)
+minfo_init(void *o)
 {
+    mnl4c_minfo_t *minfo = o;
     minfo->name = NULL;
     minfo->throttle_threshold = -1.0l;
     minfo->nthrottled = 0;
@@ -425,8 +426,9 @@ minfo_init(mnl4c_minfo_t *minfo)
 
 
 static int
-minfo_fini(mnl4c_minfo_t *minfo)
+minfo_fini(void *o)
 {
+    mnl4c_minfo_t *minfo = o;
     BYTES_DECREF(&minfo->name);
     return 0;
 }
@@ -448,8 +450,8 @@ mnl4c_ctx_new(ssize_t bsbufsz)
     array_init(&res->minfos,
                sizeof(mnl4c_minfo_t),
                0,
-               (array_initializer_t)minfo_init,
-               (array_finalizer_t)minfo_fini);
+               minfo_init,
+               minfo_fini);
     res->ty = 0;
     if (MNUNLIKELY(pthread_mutex_init(&res->mtx, NULL) != 0)) {
         FFAIL("pthread_mutex_init");
@@ -810,8 +812,9 @@ end:
 
 
 static int
-ctx_init(mnl4c_ctx_t **ctx)
+ctx_init(void *o)
 {
+    mnl4c_ctx_t **ctx = o;
     assert(ctx != NULL);
     *ctx = mnl4c_ctx_new(MNL4C_DEFAULT_BUFSZ);
     return 0;
@@ -819,8 +822,9 @@ ctx_init(mnl4c_ctx_t **ctx)
 
 
 static int
-ctx_fini(mnl4c_ctx_t **ctx)
+ctx_fini(void *o)
 {
+    mnl4c_ctx_t **ctx = o;
     assert(ctx != NULL);
     mnl4c_ctx_destroy(ctx);
     return 0;
@@ -833,8 +837,8 @@ mnl4c_init(void)
     array_init(&ctxes,
                sizeof(mnl4c_ctx_t *),
                0,
-               (array_initializer_t)ctx_init,
-               (array_finalizer_t)ctx_fini);
+               ctx_init,
+               ctx_fini);
 }
 
 
