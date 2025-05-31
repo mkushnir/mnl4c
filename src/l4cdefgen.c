@@ -201,16 +201,18 @@ l4cgen_module_destroy(l4cgen_module_t **pmod)
 
 
 static int
-l4cgen_module_fini_item(l4cgen_module_t *key, UNUSED void *value)
+l4cgen_module_fini_item(void *k, UNUSED void *value)
 {
+    l4cgen_module_t *key = k;
     l4cgen_module_destroy(&key);
     return 0;
 }
 
 
 static uint64_t
-l4cgen_module_hash(l4cgen_module_t *mod)
+l4cgen_module_hash(void const *o)
 {
+    l4cgen_module_t const *mod = o;
     //assert(mod != NULL);
     //assert(mod->mid != NULL);
     return bytes_hash(mod->mid);
@@ -218,8 +220,9 @@ l4cgen_module_hash(l4cgen_module_t *mod)
 
 
 static int
-l4cgen_module_cmp(l4cgen_module_t *a, l4cgen_module_t *b)
+l4cgen_module_cmp(void const *oa, void const *ob)
 {
+    l4cgen_module_t const *a = oa, *b = ob;
     //assert(a != NULL);
     //assert(b != NULL);
     //assert(a->mid != NULL);
@@ -713,9 +716,9 @@ main(int argc, char *argv[static argc])
     }
 
     hash_init(&modules, 127,
-        (hash_hashfn_t)l4cgen_module_hash,
-        (hash_item_comparator_t)l4cgen_module_cmp,
-        (hash_item_finalizer_t)l4cgen_module_fini_item);
+        l4cgen_module_hash,
+        l4cgen_module_cmp,
+        l4cgen_module_fini_item);
 
     render_head(fhout, fcout, hout, lib);
     for (i = 0; i < argc; ++i) {
